@@ -1,0 +1,195 @@
+direction: right
+
+departments: {
+    shape: sql_table
+
+    department_id: uuid {constraint: primary_key}
+    department_title: vachar
+    department_description: text
+}
+
+students: {
+    shape: sql_table
+
+    student_id: uuid {constraint: primary_key}
+    student_email: vachar
+    student_first_name: vachar
+    student_last_name: vachar
+    student_birthdate: date
+    major_id: uuid {constraint: foreign_key}
+}
+
+professors: {
+    shape: sql_table
+
+    professor_sin: vachar {constraint: primary_key}
+    department_id: uuid {constraint: foreign_key}
+    professor_email: vachar
+    professor_first_name: vachar
+    professor_last_name: vachar
+    professor_birthdate: date
+}
+
+majors: {
+    shape: sql_table
+  
+    major_id: uuid {constraint: primary_key}
+    department_id: uuid {constraint: foreign_key}
+    major_title: vachar
+    major_description: text
+    major_code: vachar
+}
+
+course_units: {
+    shape: sql_table
+
+    course_unit_id: uuid {constraint: primary_key}
+    course_id: uuid {constraint: foreign_key}
+    major_id: uuid {constraint: foreign_key}
+    course_unit_credit: int
+    course_unit_required: boolean
+    course_unit_gpa_requirement: float
+}
+
+courses: {
+    shape: sql_table
+  
+    course_id: uuid {constraint: primary_key}
+    course_title: vachar
+    course_description: text
+    course_code: vachar
+}
+
+prerequisites: {
+    shape: sql_table
+
+    course_id: uuid {constraint: foreign_key}
+    prerequisite_course_id: uuid {constraint: foreign_key}
+}
+
+semesters: {
+    shape: sql_table
+
+    semester_id: uuid {constraint: primary_key}
+    semester_name: varchar
+    start_date: date
+    end_date: date
+}
+
+class_section_semesters: {
+    shape: sql_table
+  
+    class_section_semester_id: uuid {constraint: primary_key}
+    course_unit_id: uuid {constraint: foreign_key}
+    semester_id: uuid {constraint: foreign_key}
+    professor_sin: varchar {constraint: foreign_key}
+}
+
+timetables: {
+    shape: sql_table
+  
+    timetables_id: uuid {constraint: primary_key}
+    class_section_semester_id: uuid {constraint: foreign_key}
+    room: vachar
+    status: vachar
+    schedule_time: vachar
+}
+
+student_enrollments: {
+    shape: sql_table
+  
+    student_enrollment_id: uuid {constraint: primary_key}
+    student_id: uuid {constraint: foreign_key}
+    class_section_semester_id: uuid {constraint: foreign_key}
+    enrollment_date: date
+    score: float
+}
+
+departments.department_id --> majors.department_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+departments.department_id --> professors.department_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+majors.major_id --> students.major_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+majors.major_id --> course_units.major_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+courses.course_id --> course_units.course_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+semesters.semester_id --> class_section_semesters.semester_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+courses.course_id --> prerequisites.course_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+courses.course_id --> prerequisites.prerequisite_course_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+course_units.course_unit_id --> class_section_semesters.course_unit_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+professors.professor_sin --> class_section_semesters.professor_sin {
+  label: "1:1"
+  style.stroke-width: 2
+}
+
+class_section_semesters.class_section_semester_id --> student_enrollments.class_section_semester_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+students.student_id --> student_enrollments.student_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+class_section_semesters.class_section_semester_id --> timetables.class_section_semester_id {
+  label: "1:N"
+  style.stroke-width: 2
+}
+
+legend: {
+  shape: text
+  label: |md
+    ## Database Relationship
+    ### 1:1 Relationships
+    - **Professors → ClassSectionSemesters** (1:1): Each professor is in charge of one class.
+
+    ### 1:N Relationships
+    - **Departments → Major** (1:N): One department has many major
+    - **Departments → Professors** (1:N): One department has many professor
+    - **Majors → Students** (1:N): One major has many student
+    - **ClassSectionSemesters → Timetables** (1:N): Each section has many lessons
+    - **Semesters → ClassSectionSemesters** (1:N): There are many classes each semester.
+    - **CourseUnits → ClassSectionSemesters** (1:N): 
+
+    ### M:N Relationships
+    - **Courses ↔ Majors** (M:N): Each major has many students studying it.
+    - **Courses ↔ Prerequisites** (M:N): Each course requires one or more prerequisite courses.
+    - **Students ↔ ClassSectionSemester** (M:N): Many students learn from many professors.
+
+    ### Notes
+  |
+}
