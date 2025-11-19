@@ -354,4 +354,48 @@ BEFORE INSERT OR UPDATE OF status ON university.timetables
 FOR EACH ROW
 EXECUTE FUNCTION university.validate_timetable_status();
 
--- Trigger each professor only teach one course
+-- Trigger student enrollment same course
+CREATE OR REPLACE FUNCTION check_duplicate_course_unit_in_semester()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_semester_id INTEGER;
+    new_course_unit_id INTEGER;
+    existing_enrollments_count INTEGER;
+BEGIN
+    SELECT 
+        css.semester_id, 
+        css.course_unit_id
+    INTO 
+        new_semester_id, 
+        new_course_unit_id
+    FROM 
+        class_section_semesters css
+    WHERE 
+        css.class_section_semester_id = NEW.class_section_semester_id;
+
+    SELECT 
+        COUNT(*)
+    INTO 
+        existing_enrollments_count
+    FROM 
+        student_enrollments se
+    JOIN 
+        class_section_semesters css_existing 
+        ON se.class_section_semester_id = css_existing.class_section_semester_id
+    WHERE 
+            se.student_id = NEW.student_id
+        AND css_existing.semester_id = new_semester_id
+        AND css_existing.course_unit_id = new_course_unit_id
+        AND se.student_enrollment_id != COALESCE(NEW.student_enrollment_id, -1); 
+
+    IF existing_enrollments_count > 0 THEN
+        RAISE EXCEPTION 'The course has already been registered.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER before_insert_update_enrollment
+BEFORE INSERT OR UPDATE OF class_section_semester_id, student_id ON student_enrollments
+FOR EACH ROW
+EXECUTE FUNCTION check_duplicate_course_unit_in_semester();
