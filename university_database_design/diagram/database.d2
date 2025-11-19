@@ -3,7 +3,7 @@ direction: right
 departments: {
     shape: sql_table
 
-    department_id: uuid {constraint: primary_key}
+    department_id: bigint {constraint: primary_key}
     department_title: vachar
     department_description: text
 }
@@ -11,19 +11,21 @@ departments: {
 students: {
     shape: sql_table
 
-    student_id: uuid {constraint: primary_key}
+    student_id: bigint {constraint: primary_key}
+    student_code: vachar
     student_email: vachar
     student_first_name: vachar
     student_last_name: vachar
     student_birthdate: date
-    major_id: uuid {constraint: foreign_key}
+    major_id: bigint {constraint: foreign_key}
+    enrollment_date: date
 }
 
 professors: {
     shape: sql_table
 
     professor_sin: vachar {constraint: primary_key}
-    department_id: uuid {constraint: foreign_key}
+    department_id: bigint {constraint: foreign_key}
     professor_email: vachar
     professor_first_name: vachar
     professor_last_name: vachar
@@ -33,8 +35,8 @@ professors: {
 majors: {
     shape: sql_table
   
-    major_id: uuid {constraint: primary_key}
-    department_id: uuid {constraint: foreign_key}
+    major_id: bigint {constraint: primary_key}
+    department_id: bigint {constraint: foreign_key}
     major_title: vachar
     major_description: text
     major_code: vachar
@@ -43,9 +45,9 @@ majors: {
 course_units: {
     shape: sql_table
 
-    course_unit_id: uuid {constraint: primary_key}
-    course_id: uuid {constraint: foreign_key}
-    major_id: uuid {constraint: foreign_key}
+    course_unit_id: bigint {constraint: primary_key}
+    course_id: bigint {constraint: foreign_key}
+    major_id: bigint {constraint: foreign_key}
     course_unit_credit: int
     course_unit_required: boolean
     course_unit_gpa_requirement: float
@@ -54,23 +56,24 @@ course_units: {
 courses: {
     shape: sql_table
   
-    course_id: uuid {constraint: primary_key}
+    course_id: bigint {constraint: primary_key}
     course_title: vachar
     course_description: text
     course_code: vachar
+    course_type: vachar
 }
 
 prerequisites: {
     shape: sql_table
 
-    course_id: uuid {constraint: foreign_key}
-    prerequisite_course_id: uuid {constraint: foreign_key}
+    course_id: bigint {constraint: foreign_key}
+    prerequisite_course_id: bigint {constraint: foreign_key}
 }
 
 semesters: {
     shape: sql_table
 
-    semester_id: uuid {constraint: primary_key}
+    semester_id: bigint {constraint: primary_key}
     semester_name: varchar
     start_date: date
     end_date: date
@@ -79,17 +82,18 @@ semesters: {
 class_section_semesters: {
     shape: sql_table
   
-    class_section_semester_id: uuid {constraint: primary_key}
-    course_unit_id: uuid {constraint: foreign_key}
-    semester_id: uuid {constraint: foreign_key}
+    class_section_semester_id: bigint {constraint: primary_key}
+    course_unit_id: bigint {constraint: foreign_key}
+    semester_id: bigint {constraint: foreign_key}
     professor_sin: varchar {constraint: foreign_key}
+    max_capacity: int
 }
 
 timetables: {
     shape: sql_table
   
-    timetables_id: uuid {constraint: primary_key}
-    class_section_semester_id: uuid {constraint: foreign_key}
+    timetables_id: bigint {constraint: primary_key}
+    class_section_semester_id: bigint {constraint: foreign_key}
     room: vachar
     status: vachar
     schedule_time: vachar
@@ -98,9 +102,9 @@ timetables: {
 student_enrollments: {
     shape: sql_table
   
-    student_enrollment_id: uuid {constraint: primary_key}
-    student_id: uuid {constraint: foreign_key}
-    class_section_semester_id: uuid {constraint: foreign_key}
+    student_enrollment_id: bigint {constraint: primary_key}
+    student_id: bigint {constraint: foreign_key}
+    class_section_semester_id: bigint {constraint: foreign_key}
     enrollment_date: date
     score: float
 }
@@ -187,8 +191,8 @@ legend: {
 
     ### M:N Relationships
     - **Courses ↔ Majors** (M:N): Each major has many students studying it.
-    - **Courses ↔ Prerequisites** (M:N): Each course requires one or more prerequisite courses.
-    - **Students ↔ ClassSectionSemester** (M:N): Many students learn from many professors.
+    - **Courses ↔ Courses** (M:N): Each course requires one or more prerequisite courses.
+    - **Students ↔ ClassSectionSemester** (M:N): Each student studies in many classes and each class has many students.
 
 
     ### Notes
