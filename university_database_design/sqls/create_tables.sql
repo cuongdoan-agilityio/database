@@ -27,7 +27,7 @@ CREATE TABLE departments (
 CREATE TABLE majors (
     major_id BIGINT PRIMARY KEY,
     department_id BIGINT,
-    major_code VARCHAR UNIQUE,
+    major_code VARCHAR UNIQUE NOT NULL,
     title VARCHAR,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -39,11 +39,11 @@ CREATE TABLE majors (
 -- Craete students table
 CREATE TABLE students (
     student_id BIGSERIAL PRIMARY KEY,
-    student_code VARCHAR UNIQUE,
+    student_code VARCHAR UNIQUE NOT NULL,
     student_email VARCHAR UNIQUE NOT NULL,
     major_id BIGINT,
-    first_name VARCHAR(255) NOT NULL,
-    last_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR NOT NULL,
+    last_name VARCHAR NOT NULL,
     enrollment_date DATE NOT NULL,
     birthday DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,7 +69,7 @@ CREATE TABLE professors (
 -- Create courses table
 CREATE TABLE courses (
     course_id BIGINT PRIMARY KEY,
-    course_code VARCHAR UNIQUE,
+    course_code VARCHAR UNIQUE NOT NULL,
     description TEXT,
     course_type VARCHAR,
     title VARCHAR,
@@ -80,10 +80,10 @@ CREATE TABLE courses (
 -- Create course_units table
 CREATE TABLE course_units (
     course_unit_id BIGINT PRIMARY KEY,
-    course_id BIGINT REFERENCES courses(course_id),
-    major_id BIGINT REFERENCES majors(major_id),
-    credit INT,
-    required BOOLEAN,
+    course_id BIGINT,
+    major_id BIGINT,
+    credit INT NOT NULL,
+    required BOOLEAN DEFAULT TRUE,
     gpa_requirement FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -131,7 +131,7 @@ CREATE TABLE class_section_semesters (
 -- Create timetables table
 CREATE TABLE timetables (
     timetables_id BIGSERIAL PRIMARY KEY,
-    class_section_semester_id BIGINT REFERENCES class_section_semesters(class_section_semester_id),
+    class_section_semester_id BIGINT,
     room VARCHAR,
     status VARCHAR,
     schedule_time VARCHAR,
@@ -144,8 +144,8 @@ CREATE TABLE timetables (
 -- Create student_enrollments table
 CREATE TABLE student_enrollments (
     student_enrollment_id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT REFERENCES students(student_id),
-    class_section_semester_id BIGINT REFERENCES class_section_semesters(class_section_semester_id),
+    student_id BIGINT,
+    class_section_semester_id BIGINT,
     enrollment_date DATE,
     score FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
