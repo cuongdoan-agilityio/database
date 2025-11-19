@@ -86,6 +86,7 @@ class_section_semesters: {
     course_unit_id: bigint {constraint: foreign_key}
     semester_id: bigint {constraint: foreign_key}
     professor_sin: varchar {constraint: foreign_key}
+    max_capacity: int
 }
 
 timetables: {
@@ -190,8 +191,8 @@ legend: {
 
     ### M:N Relationships
     - **Courses ↔ Majors** (M:N): Each major has many students studying it.
-    - **Courses ↔ Prerequisites** (M:N): Each course requires one or more prerequisite courses.
-    - **Students ↔ ClassSectionSemester** (M:N): Many students learn from many professors.
+    - **Courses ↔ Courses** (M:N): Each course requires one or more prerequisite courses.
+    - **Students ↔ ClassSectionSemester** (M:N): Each student studies in many classes and each class has many students.
 
 
     ### Notes
