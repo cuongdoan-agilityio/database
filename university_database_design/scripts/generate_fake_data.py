@@ -92,7 +92,7 @@ def generate_data():
             enrollments = []
             prerequisites = set()
 
-            # --- 1. Departments ---
+            # Generate data for Departments table
             f.write("-- 1. Departments\n")
             for i in range(1, len(department_names) + 1):
                 department = {
@@ -105,8 +105,8 @@ def generate_data():
                     f"INSERT INTO departments(department_id, title, description) VALUES ({sql_str(department['department_id'])}, {sql_str(department['title'])}, {sql_str(department['description'])});\n"
                 )
 
-            # --- 2. Majors ---
-            f.write("\n-- 2. Majors\n")
+            # Generate data for Majors table
+            f.write("\n-- Majors\n")
             for i in range(1, NUM_MAJORS + 1):
                 major = {
                     "major_id": i,
@@ -120,8 +120,8 @@ def generate_data():
                     f"INSERT INTO majors(major_id, department_id, major_code, title, description) VALUES ({sql_str(major['major_id'])}, {sql_str(major['department_id'])}, {sql_str(major['major_code'])}, {sql_str(major['title'])}, {sql_str(major['description'])});\n"
                 )
 
-            # --- 3. Students (Check unique email) ---
-            f.write("\n-- 3. Students\n")
+            # Generate data for Students table
+            f.write("\n-- Students\n")
             used_emails_students = set()
             for i in range(1, NUM_STUDENTS + 1):
                 while True:
@@ -152,7 +152,7 @@ def generate_data():
                 "SELECT setval('university.students_student_id_seq', (SELECT MAX(student_id) FROM university.students));\n"
             )
 
-            # Get 50 to generate enrollments
+            # Get 40 student to generate enrollments
             list_of_students = students[:40]
             list_of_student_major_ids = [
                 student["major_id"] for student in list_of_students
@@ -164,8 +164,8 @@ def generate_data():
                 if major["major_id"] in unique_student_major_ids_set
             ]
 
-            # --- 4. Professors (Check unique email and SIN) ---
-            f.write("\n-- 4. Professors\n")
+            # Generate data for Professors table
+            f.write("\n-- Professors\n")
             used_emails_professors = set()
             used_sins = set()
             for i in range(1, NUM_PROFESSORS + 1):
@@ -196,8 +196,8 @@ def generate_data():
                     f"INSERT INTO professors(professor_sin, department_id, professor_email, first_name, last_name, birthday) VALUES ({sql_str(professor['professor_sin'])}, {sql_str(professor['department_id'])}, {sql_str(professor['professor_email'])}, {sql_str(professor['first_name'])}, {sql_str(professor['last_name'])}, {sql_str(professor['birthday'])});\n"
                 )
 
-            # --- 5. Courses ---
-            f.write("\n-- 5. Courses\n")
+            # Generate data for Courses table
+            f.write("\n-- Courses\n")
             used_course_codes = set()
             for i in range(1, NUM_COURSES + 1):
                 while True:
@@ -219,8 +219,8 @@ def generate_data():
                     f"INSERT INTO courses(course_id, course_code, title, course_type, description) VALUES ({sql_str(course['course_id'])}, {sql_str(course['course_code'])}, {sql_str(course['title'])}, {sql_str(course['course_type'])}, {sql_str(course['description'])});\n"
                 )
 
-            # --- 6. Course Units (unique combination of course_id and major_id is likely needed) ---
-            f.write("\n-- 6. Course Units\n")
+            # Generate data for Course Units table
+            f.write("\n-- Course Units\n")
             used_cu_combinations = set()
             cu_id = 1
             while cu_id <= NUM_COURSE_UNITS:
@@ -253,8 +253,8 @@ def generate_data():
                     )
                     cu_id += 1
 
-            # --- 7. Semesters ---
-            f.write("\n-- 7. Semesters\n")
+            # Generate data for Semesters table
+            f.write("\n-- Semesters\n")
             start_date_ref = fake.date_object() - timedelta(days=365 * 4)
             for i in range(1, NUM_SEMESTERS + 1):
                 start = start_date_ref + timedelta(days=(i - 1) * 150)
@@ -270,8 +270,8 @@ def generate_data():
                     f"INSERT INTO semesters(semester_id, name, start_date, end_date) VALUES ({sql_str(sem['semester_id'])}, {sql_str(sem['name'])}, {sql_str(sem['start_date'])}, {sql_str(sem['end_date'])});\n"
                 )
 
-            # --- 8. Class Section Semesters ---
-            f.write("\n-- 8. Class Section Semesters\n")
+            # Generate data for Class Section Semesters table
+            f.write("\n-- Class Section Semesters\n")
             class_section_id = 1
             while class_section_id <= NUM_CLASS_SECTIONS:
                 if not course_units or not semesters or not professors:
@@ -288,18 +288,19 @@ def generate_data():
                     ],
                     "semester_id": random.choice(semesters)["semester_id"],
                     "professor_sin": random.choice(professors)["professor_sin"],
+                    "max_capacity": random.randint(20, 60),
                 }
                 class_sections.append(cs)
                 f.write(
-                    f"INSERT INTO class_section_semesters(class_section_semester_id, course_unit_id, semester_id, professor_sin) VALUES ({sql_str(cs['class_section_semester_id'])}, {sql_str(cs['course_unit_id'])}, {sql_str(cs['semester_id'])}, {sql_str(cs['professor_sin'])});\n"
+                    f"INSERT INTO class_section_semesters(class_section_semester_id, course_unit_id, semester_id, professor_sin, max_capacity) VALUES ({sql_str(cs['class_section_semester_id'])}, {sql_str(cs['course_unit_id'])}, {sql_str(cs['semester_id'])}, {sql_str(cs['professor_sin'])}, {sql_str(cs['max_capacity'])});\n"
                 )
                 class_section_id += 1
             f.write(
                 "SELECT setval('university.class_section_semesters_class_section_semester_id_seq', (SELECT MAX(class_section_semester_id) FROM university.class_section_semesters));\n"
             )
 
-            # --- 9. Timetables ---
-            f.write("\n-- 9. Timetables\n")
+            # Generate data for Timetables table
+            f.write("\n-- Timetables\n")
             timetable_id = 1
             selected_class_sections = random.sample(
                 class_sections, min(NUM_TIMETABLES, len(class_sections))
@@ -323,8 +324,8 @@ def generate_data():
                     )
                     timetable_id += 1
 
-            # --- 10. Prerequisites (Check unique combination of course_id and prerequisite_course_id) ---
-            f.write("\n-- 11. Prerequisites\n")
+            # Generate data for Prerequisites table
+            f.write("\n-- Prerequisites\n")
             prereq_count = 0
             while prereq_count < NUM_PREREQUISITES:
                 course = random.choice(courses)
@@ -340,9 +341,8 @@ def generate_data():
                         )
                         prereq_count += 1
 
-            # --- 11. Student Enrollments ---
+            # Generate data for Student Enrollments table
             cu_gpa_lookup = {
-                # cu["course_unit_id"]: cu["gpa_requirement"] for cu in course_units
                 cu["course_unit_id"]: {
                     "gpa_requirement": cu["gpa_requirement"],
                     "major_id": cu["major_id"],
@@ -357,7 +357,7 @@ def generate_data():
                 is None
             ]
 
-            f.write("\n-- 10. Student Enrollments\n")
+            f.write("\n-- Student Enrollments\n")
             used_enrollments = set()
             enrollment_id = 0
 
@@ -366,14 +366,12 @@ def generate_data():
                 selected_student = random.choice(list_of_students)
                 student_id = selected_student["student_id"]
 
-                print(cu_gpa_lookup, "=================== cu_gpa_lookup")
                 valid_eligible_class_section = filter_class_sections_by_major(
                     selected_student["major_id"],
                     eligible_class_sections,
                     cu_gpa_lookup,
                 )
 
-                print("======================bbbbbbb==================")
                 if not valid_eligible_class_section:
                     break
                 class_section_semester_id = random.choice(valid_eligible_class_section)[

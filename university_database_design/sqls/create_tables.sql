@@ -27,7 +27,7 @@ CREATE TABLE departments (
 CREATE TABLE majors (
     major_id BIGINT PRIMARY KEY,
     department_id BIGINT,
-    major_code VARCHAR,
+    major_code VARCHAR UNIQUE,
     title VARCHAR,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,7 +69,7 @@ CREATE TABLE professors (
 -- Create courses table
 CREATE TABLE courses (
     course_id BIGINT PRIMARY KEY,
-    course_code VARCHAR,
+    course_code VARCHAR UNIQUE,
     description TEXT,
     course_type VARCHAR,
     title VARCHAR,
@@ -121,6 +121,7 @@ CREATE TABLE class_section_semesters (
     professor_sin VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    max_capacity INT NOT NULL,
 
     FOREIGN KEY (course_unit_id) REFERENCES course_units(course_unit_id) ON DELETE CASCADE,
     FOREIGN KEY (semester_id) REFERENCES semesters(semester_id) ON DELETE CASCADE,
@@ -154,7 +155,10 @@ CREATE TABLE student_enrollments (
     FOREIGN KEY (class_section_semester_id) REFERENCES class_section_semesters(class_section_semester_id) ON DELETE CASCADE
 );
 
--- Function check student score range between 0.00 and 4.00
+--------------------------------------------------------------------------------------------------------
+-- BR: Score on a 4-point scale
+-- Rule: Student score range between 0.00 and 4.00
+-- Trigger when adding new or updating, check the scores
 CREATE OR REPLACE FUNCTION university.check_score_range()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -165,14 +169,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for score validation
 CREATE TRIGGER score_validation_trigger
 BEFORE INSERT OR UPDATE OF score ON university.student_enrollments
 FOR EACH ROW
 EXECUTE FUNCTION university.check_score_range();
 
-
--- Function check course GPA prerequisite value range between 0.00 and 4.00
+--------------------------------------------------------------------------------------------------------
+-- BR: Course GPA on a 4-point scale
+-- Rule: Course gpa requirement score range between 0.00 and 4.00
+-- Trigger when adding new or updating course GPA prerequisite value
 CREATE OR REPLACE FUNCTION university.check_gpa_range()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -183,13 +188,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for gpa validation
 CREATE TRIGGER gpa_validation_trigger
 BEFORE INSERT OR UPDATE OF gpa_requirement ON university.course_units
 FOR EACH ROW
 EXECUTE FUNCTION university.check_gpa_range();
 
--- Function check major eligibility when student enrolls in a class section
+--------------------------------------------------------------------------------------------------------
+-- BR: Students are only allowed to register for courses included in the curriculum.
+-- Rule: The student's major code must match the major code of the registered course.
+-- Trigger when adding new or updating student_enrollemnt record, check major eligibility when student enrolls in a class section.
 CREATE OR REPLACE FUNCTION university.check_major_eligibility()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -216,13 +223,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for major eligibility check
 CREATE TRIGGER major_eligibility_check_trigger
 BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.student_enrollments
 FOR EACH ROW
 EXECUTE FUNCTION university.check_major_eligibility();
 
-
+--------------------------------------------------------------------------------------------------------
+-- BR: Students can only register for courses when they satisfy the minimum average score of the subject.
+-- Rule: The GPA score of the courses studied must be greater than or equal to the GPA required of the course.
+-- Triggered when adding a new student_enrollemnt record, calculates the GPA of the courses studied, compares it with the required GPQ of the course want to register.
 CREATE OR REPLACE FUNCTION university.check_gpa_prerequisite()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -265,12 +274,14 @@ BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.s
 FOR EACH ROW
 EXECUTE FUNCTION university.check_gpa_prerequisite();
 
-
+--------------------------------------------------------------------------------------------------------
+-- BR: Students registering for a course must complete the prerequisite courses for the course they want to register for.
+-- Rule: Students must complete the prerequisite courses required for the course.
+-- Triggered when adding a new or updating student_enrollemnt record, get a list of all the courses the student has taken and compare it with the requirements of the course he/she registered for.
 CREATE OR REPLACE FUNCTION university.check_course_prerequisites()
 RETURNS TRIGGER AS $$
 DECLARE
     target_course_id BIGINT;
-    -- Đổi tên biến lặp từ prerequisite_course_id thành prereq_id để tránh mơ hồ
     prereq_id BIGINT; 
     prerequisite_course_code VARCHAR;
     prerequisite_course_title VARCHAR;
@@ -282,7 +293,6 @@ BEGIN
     JOIN university.course_units AS cu ON css.course_unit_id = cu.course_unit_id
     WHERE css.class_section_semester_id = NEW.class_section_semester_id;
 
-    -- Lặp qua mỗi ID khóa học tiên quyết (sử dụng prereq_id)
     FOR prereq_id IN 
         SELECT prerequisite_course_id
         FROM university.prerequisites
@@ -290,24 +300,18 @@ BEGIN
     LOOP
         completed := FALSE;
 
-        -- Kiểm tra xem sinh viên đã hoàn thành (có điểm số) khóa học tiên quyết này chưa
         SELECT TRUE INTO completed
         FROM university.student_enrollments AS se
         JOIN university.class_section_semesters AS css_old ON se.class_section_semester_id = css_old.class_section_semester_id
         JOIN university.course_units AS cu_old ON css_old.course_unit_id = cu_old.course_unit_id
         
         WHERE se.student_id = NEW.student_id
-          AND cu_old.course_id = prereq_id -- *** SỬ DỤNG BIẾN ĐÃ ĐỔI TÊN ***
+          AND cu_old.course_id = prereq_id
           AND se.score IS NOT NULL 
         LIMIT 1;
 
         IF NOT completed THEN
-            SELECT course_code, title INTO prerequisite_course_code, prerequisite_course_title
-            FROM university.courses
-            WHERE course_id = prereq_id;
-
-            RAISE EXCEPTION 'Lỗi đăng ký: Sinh viên chưa hoàn thành khóa học tiên quyết "%" (Mã: %).', 
-            prerequisite_course_title, prerequisite_course_code;
+            RAISE EXCEPTION 'Prerequisite course not completed.';
         END IF;
     END LOOP;
 
@@ -320,7 +324,10 @@ BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.s
 FOR EACH ROW
 EXECUTE FUNCTION university.check_course_prerequisites();
 
--- Trigger to check value of course_type in courses table
+--------------------------------------------------------------------------------------------------------
+-- BR: The course type of a course includes only values: General, Fundamental, Specialized
+-- Rule: The course_type field in the courses table must be one of the specified values: General, Fundamental, Specialized
+-- Triggered when adding a new or updating the course_type of course record.
 CREATE OR REPLACE FUNCTION university.validate_course_type()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -337,6 +344,9 @@ BEFORE INSERT OR UPDATE OF course_type ON university.courses
 FOR EACH ROW
 EXECUTE FUNCTION university.validate_course_type();
 
+--------------------------------------------------------------------------------------------------------
+-- BR: The status of a timetable includes only values: Scheduled, Cancelled, Complete
+-- Rule: The status field in the timetable table must be one of the specified values: Scheduled, Cancelled, Complete
 -- Trigger to status value in timetables table
 CREATE OR REPLACE FUNCTION university.validate_timetable_status()
 RETURNS TRIGGER AS $$
@@ -354,8 +364,11 @@ BEFORE INSERT OR UPDATE OF status ON university.timetables
 FOR EACH ROW
 EXECUTE FUNCTION university.validate_timetable_status();
 
--- Trigger student enrollment same course
-CREATE OR REPLACE FUNCTION check_duplicate_course_unit_in_semester()
+--------------------------------------------------------------------------------------------------------
+-- BR: Student cannot register for the same course in one semester.
+-- Rule: A student cannot enroll in multiple class sections of the same course unit within the same semester.
+-- Trigger when adding new or updating student_enrollemnt record, check duplicate course unit in the same semester.
+CREATE OR REPLACE FUNCTION university.check_duplicate_course_unit_in_semester()
 RETURNS TRIGGER AS $$
 DECLARE
     new_semester_id INTEGER;
@@ -369,7 +382,7 @@ BEGIN
         new_semester_id, 
         new_course_unit_id
     FROM 
-        class_section_semesters css
+        university.class_section_semesters css
     WHERE 
         css.class_section_semester_id = NEW.class_section_semester_id;
 
@@ -378,12 +391,11 @@ BEGIN
     INTO 
         existing_enrollments_count
     FROM 
-        student_enrollments se
+        university.student_enrollments AS se
     JOIN 
-        class_section_semesters css_existing 
+        university.class_section_semesters AS css_existing 
         ON se.class_section_semester_id = css_existing.class_section_semester_id
-    WHERE 
-            se.student_id = NEW.student_id
+    WHERE se.student_id = NEW.student_id
         AND css_existing.semester_id = new_semester_id
         AND css_existing.course_unit_id = new_course_unit_id
         AND se.student_enrollment_id != COALESCE(NEW.student_enrollment_id, -1); 
@@ -396,6 +408,50 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER before_insert_update_enrollment
-BEFORE INSERT OR UPDATE OF class_section_semester_id, student_id ON student_enrollments
+BEFORE INSERT OR UPDATE OF class_section_semester_id, student_id ON university.student_enrollments
 FOR EACH ROW
-EXECUTE FUNCTION check_duplicate_course_unit_in_semester();
+EXECUTE FUNCTION university.check_duplicate_course_unit_in_semester();
+
+--------------------------------------------------------------------------------------------------------
+-- BR: Class section capacity
+-- Rule: The number of students enrolled in a class section must not exceed its maximum capacity.
+-- Trigger when adding new student_enrollemnt record, check the maximum capacity of the class section semester.
+CREATE OR REPLACE FUNCTION university.check_max_capacity()
+RETURNS TRIGGER AS $$
+DECLARE
+    class_max_capacity INTEGER;
+    current_enrollment_count INTEGER;
+BEGIN
+    SELECT 
+        css.max_capacity
+    INTO 
+        class_max_capacity
+    FROM 
+        university.class_section_semesters AS css
+    WHERE 
+        css.class_section_semester_id = NEW.class_section_semester_id;
+
+    IF class_max_capacity IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT 
+        COUNT(*)
+    INTO 
+        current_enrollment_count
+    FROM 
+        university.student_enrollments AS se
+    WHERE 
+        se.class_section_semester_id = NEW.class_section_semester_id;
+
+    IF current_enrollment_count >= class_max_capacity THEN
+        RAISE EXCEPTION 'Class section capacity exceeded.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER before_insert_check_capacity
+BEFORE INSERT ON university.student_enrollments
+FOR EACH ROW
+EXECUTE FUNCTION university.check_max_capacity();
