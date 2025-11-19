@@ -15,8 +15,10 @@ SELECT
     s.name AS semester_name,
     COUNT(css.class_section_semester_id) AS total_class_sections,
     COUNT(DISTINCT css.course_unit_id) AS total_unique_courses_offered
+    COUNT(DISTINCT cu.course_id) AS total_course
 FROM university.semesters s
 LEFT JOIN university.class_section_semesters css ON s.semester_id = css.semester_id
+LEFT JOIN university.course_units cu ON css.course_unit_id = cu.course_unit_id
 GROUP BY s.semester_id, s.name
 ORDER BY s.semester_id;
 
@@ -26,11 +28,13 @@ SELECT
     s.student_code,
     s.first_name,
     s.last_name,
-    COUNT(se.student_enrollment_id) AS total_courses_enrolled
+    COUNT(css.course_unit_id) AS total_courses_enrolled
 FROM university.students s
 JOIN university.student_enrollments se ON s.student_id = se.student_id
+JOIN university.class_section_semesters css ON se.class_section_semester_id = css.class_section_semester_id
 GROUP BY s.student_id, s.student_code, s.first_name, s.last_name
-HAVING COUNT(se.student_enrollment_id) > 2
+-- HAVING COUNT(cs.student_enrollment_id) > 2
+HAVING COUNT(css.course_unit_id) > 2
 ORDER BY total_courses_enrolled DESC, s.last_name ASC;
 
 -- List all active timetable entries with professor name, course name, semester, and room
