@@ -307,7 +307,7 @@ BEGIN
         JOIN university.course_majors AS cm_old ON sect_old.course_major_id = cm_old.course_major_id
         
         WHERE se.student_id = NEW.student_id
-          AND cu_old.course_id = prereq_id
+          AND cm_old.course_id = prereq_id
           AND se.score IS NOT NULL 
         LIMIT 1;
 
@@ -440,3 +440,80 @@ FOR EACH ROW
 EXECUTE FUNCTION university.check_max_capacity();
 
 -- Trigger SIN should be string of numbers only
+CREATE OR REPLACE FUNCTION university.check_professor_sin_format()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.professor_sin IS NULL OR NEW.professor_sin !~ '^\d+$' THEN
+        RAISE EXCEPTION 'Invalid SIN Format: SIN must contain digits only.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_professor_sin_trigger
+BEFORE INSERT OR UPDATE OF professor_sin ON university.professors
+FOR EACH ROW
+EXECUTE FUNCTION university.check_professor_sin_format();
+
+-- Trigger schiduled_time should be in the semester date range
+CREATE OR REPLACE FUNCTION university.check_schedule_time_in_semester_range()
+RETURNS TRIGGER AS $$
+DECLARE
+    semester_start DATE;
+    semester_end DATE;
+    semester_id_val BIGINT;
+BEGIN
+    SELECT semester_id
+    INTO semester_id_val
+    FROM university.sections
+    WHERE section_id = NEW.section_id;
+
+    SELECT start_date, end_date
+    INTO semester_start, semester_end
+    FROM university.semesters
+    WHERE semester_id = semester_id_val;
+
+    IF NEW.schedule_time < semester_start::TIMESTAMP OR NEW.schedule_time >= (semester_end + INTERVAL '1 day')::TIMESTAMP THEN
+        RAISE EXCEPTION 'Schedule date and time is outside the valid range for the semester.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_schedule_time_trigger
+BEFORE INSERT OR UPDATE OF schedule_time, section_id ON university.timetables
+FOR EACH ROW
+EXECUTE FUNCTION university.check_schedule_time_in_semester_range();
+
+-- Trigger check student email format
+CREATE OR REPLACE FUNCTION university.check_student_email_format()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.student_email !~* '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$' THEN
+        RAISE EXCEPTION 'Invalid Email Format';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_student_email_trigger
+BEFORE INSERT OR UPDATE OF student_email ON university.students
+FOR EACH ROW
+EXECUTE FUNCTION university.check_student_email_format();
+
+-- Trigger check professor email format
+CREATE OR REPLACE FUNCTION university.check_professor_email_format()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.professor_email !~* '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$' THEN
+        RAISE EXCEPTION 'Invalid Email Format';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_professor_email_trigger
+BEFORE INSERT OR UPDATE OF professor_email ON university.professors
+FOR EACH ROW
+EXECUTE FUNCTION university.check_professor_email_format();
