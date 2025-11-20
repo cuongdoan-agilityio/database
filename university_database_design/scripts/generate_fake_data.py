@@ -1,6 +1,6 @@
 from faker import Faker
 import random
-from datetime import timedelta
+import datetime
 
 fake = Faker("en_US")
 
@@ -12,7 +12,7 @@ NUM_MAJORS = 7
 NUM_STUDENTS = 250
 NUM_PROFESSORS = 20
 NUM_COURSES = 25
-NUM_COURSE_UNITS = 70
+NUM_COURSE_MAJORS = 70
 NUM_SEMESTERS = 5
 NUM_CLASS_SECTIONS = 200
 NUM_TIMETABLES = 100
@@ -49,8 +49,8 @@ def filter_class_sections_by_major(
     specific_eligible_sections = []
 
     for cs in class_section_list:
-        course_unit_id = cs["course_unit_id"]
-        lookup_data = course_unit_lookup.get(course_unit_id)
+        course_major_id = cs["course_major_id"]
+        lookup_data = course_unit_lookup.get(course_major_id)
         if not lookup_data:
             continue
 
@@ -66,13 +66,13 @@ def generate_data():
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write("SET search_path TO university, public;\n\n")
-            f.write("TRUNCATE TABLE student_enrollments RESTART IDENTITY CASCADE;\n")
+            f.write("TRUNCATE TABLE student_sections RESTART IDENTITY CASCADE;\n")
             f.write("TRUNCATE TABLE timetables RESTART IDENTITY CASCADE;\n")
             f.write(
-                "TRUNCATE TABLE class_section_semesters RESTART IDENTITY CASCADE;\n"
+                "TRUNCATE TABLE sections RESTART IDENTITY CASCADE;\n"
             )
             f.write("TRUNCATE TABLE prerequisites CASCADE;\n")
-            f.write("TRUNCATE TABLE course_units CASCADE;\n")
+            f.write("TRUNCATE TABLE course_majors CASCADE;\n")
             f.write("TRUNCATE TABLE students RESTART IDENTITY CASCADE;\n")
             f.write("TRUNCATE TABLE professors CASCADE;\n")
             f.write("TRUNCATE TABLE semesters CASCADE;\n")
@@ -85,7 +85,7 @@ def generate_data():
             students = []
             professors = []
             courses = []
-            course_units = []
+            course_majors = []
             semesters = []
             class_sections = []
             timetables = []
@@ -148,9 +148,6 @@ def generate_data():
                 f.write(
                     f"INSERT INTO students(student_id, student_code, student_email, first_name, last_name, birthday, major_id, enrollment_date) VALUES ({sql_str(student['student_id'])}, {sql_str(student['student_code'])}, {sql_str(student['student_email'])}, {sql_str(student['first_name'])}, {sql_str(student['last_name'])}, {sql_str(student['birthday'])}, {sql_str(student['major_id'])}, {sql_str(student['enrollment_date'])});\n"
                 )
-            f.write(
-                "SELECT setval('university.students_student_id_seq', (SELECT MAX(student_id) FROM university.students));\n"
-            )
 
             # Get 40 student to generate enrollments
             list_of_students = students[:40]
@@ -223,7 +220,7 @@ def generate_data():
             f.write("\n-- Course Units\n")
             used_cu_combinations = set()
             cu_id = 1
-            while cu_id <= NUM_COURSE_UNITS:
+            while cu_id <= NUM_COURSE_MAJORS:
                 course = random.choice(courses)
                 course_id = course["course_id"]
                 major_id = random.choice(majors)["major_id"]
@@ -236,7 +233,7 @@ def generate_data():
                     gpa_req = round(random.uniform(2.5, 4.0), 2)
 
                     cu = {
-                        "course_unit_id": cu_id,
+                        "course_major_id": cu_id,
                         "course_id": course_id,
                         "major_id": major_id,
                         "credit": random.choice([2, 3, 4]),
@@ -247,18 +244,18 @@ def generate_data():
                             gpa_req if course["course_type"] != "General" else None
                         ),
                     }
-                    course_units.append(cu)
+                    course_majors.append(cu)
                     f.write(
-                        f"INSERT INTO course_units(course_unit_id, course_id, major_id, credit, required, gpa_requirement) VALUES ({sql_str(cu['course_unit_id'])}, {sql_str(cu['course_id'])}, {sql_str(cu['major_id'])}, {sql_str(cu['credit'])}, {sql_str(cu['required'])}, {sql_str(cu['gpa_requirement'])});\n"
+                        f"INSERT INTO course_majors(course_major_id, course_id, major_id, credit, required, gpa_requirement) VALUES ({sql_str(cu['course_major_id'])}, {sql_str(cu['course_id'])}, {sql_str(cu['major_id'])}, {sql_str(cu['credit'])}, {sql_str(cu['required'])}, {sql_str(cu['gpa_requirement'])});\n"
                     )
                     cu_id += 1
 
             # Generate data for Semesters table
             f.write("\n-- Semesters\n")
-            start_date_ref = fake.date_object() - timedelta(days=365 * 4)
+            start_date_ref = fake.date_object() - datetime.timedelta(days=365 * 4)
             for i in range(1, NUM_SEMESTERS + 1):
-                start = start_date_ref + timedelta(days=(i - 1) * 150)
-                end = start + timedelta(days=120)
+                start = start_date_ref + datetime.timedelta(days=(i - 1) * 150)
+                end = start + datetime.timedelta(days=120)
                 sem = {
                     "semester_id": i,
                     "name": f"Semester {i} - {start.year}",
@@ -274,17 +271,17 @@ def generate_data():
             f.write("\n-- Class Section Semesters\n")
             class_section_id = 1
             while class_section_id <= NUM_CLASS_SECTIONS:
-                if not course_units or not semesters or not professors:
+                if not course_majors or not semesters or not professors:
                     break
 
-                no_gpa_course_units = [
-                    cu for cu in course_units if not cu["gpa_requirement"]
+                no_gpa_course_majors = [
+                    cu for cu in course_majors if not cu["gpa_requirement"]
                 ]
 
                 cs = {
-                    "class_section_semester_id": class_section_id,
-                    "course_unit_id": random.choice(no_gpa_course_units)[
-                        "course_unit_id"
+                    "section_id": class_section_id,
+                    "course_major_id": random.choice(no_gpa_course_majors)[
+                        "course_major_id"
                     ],
                     "semester_id": random.choice(semesters)["semester_id"],
                     "professor_sin": random.choice(professors)["professor_sin"],
@@ -292,12 +289,9 @@ def generate_data():
                 }
                 class_sections.append(cs)
                 f.write(
-                    f"INSERT INTO class_section_semesters(class_section_semester_id, course_unit_id, semester_id, professor_sin, max_capacity) VALUES ({sql_str(cs['class_section_semester_id'])}, {sql_str(cs['course_unit_id'])}, {sql_str(cs['semester_id'])}, {sql_str(cs['professor_sin'])}, {sql_str(cs['max_capacity'])});\n"
+                    f"INSERT INTO sections(section_id, course_major_id, semester_id, professor_sin, max_capacity) VALUES ({sql_str(cs['section_id'])}, {sql_str(cs['course_major_id'])}, {sql_str(cs['semester_id'])}, {sql_str(cs['professor_sin'])}, {sql_str(cs['max_capacity'])});\n"
                 )
                 class_section_id += 1
-            f.write(
-                "SELECT setval('university.class_section_semesters_class_section_semester_id_seq', (SELECT MAX(class_section_semester_id) FROM university.class_section_semesters));\n"
-            )
 
             # Generate data for Timetables table
             f.write("\n-- Timetables\n")
@@ -313,20 +307,21 @@ def generate_data():
 
                     timetable = {
                         "timetables_id": timetable_id,
-                        "class_section_semester_id": cs["class_section_semester_id"],
+                        "section_id": cs["section_id"],
                         "room": f"Room {random.randint(101, 505)}",
                         "status": random.choice(["Scheduled", "Cancelled", "Complete"]),
                         "schedule_time": f"{random.randint(8, 17)}:00",
                     }
                     timetables.append(timetable)
                     f.write(
-                        f"INSERT INTO timetables(timetables_id, class_section_semester_id, room, status, schedule_time) VALUES ({sql_str(timetable['timetables_id'])}, {sql_str(timetable['class_section_semester_id'])}, {sql_str(timetable['room'])}, {sql_str(timetable['status'])}, {sql_str(timetable['schedule_time'])});\n"
+                        f"INSERT INTO timetables(timetables_id, section_id, room, status, schedule_time) VALUES ({sql_str(timetable['timetables_id'])}, {sql_str(timetable['section_id'])}, {sql_str(timetable['room'])}, {sql_str(timetable['status'])}, {sql_str(timetable['schedule_time'])});\n"
                     )
                     timetable_id += 1
 
             # Generate data for Prerequisites table
             f.write("\n-- Prerequisites\n")
             prereq_count = 0
+            
             while prereq_count < NUM_PREREQUISITES:
                 course = random.choice(courses)
                 course_id = random.choice(courses)["course_id"]
@@ -337,23 +332,23 @@ def generate_data():
                     if pair not in prerequisites:
                         prerequisites.add(pair)
                         f.write(
-                            f"INSERT INTO prerequisites(course_id, prerequisite_course_id) VALUES ({sql_str(course_id)}, {sql_str(prereq_id)});\n"
+                            f"INSERT INTO prerequisites(prerequisite_id, course_id, prerequisite_course_id) VALUES ({sql_str(prereq_count + 1)}, {sql_str(course_id)}, {sql_str(prereq_id)});\n"
                         )
                         prereq_count += 1
 
             # Generate data for Student Enrollments table
             cu_gpa_lookup = {
-                cu["course_unit_id"]: {
+                cu["course_major_id"]: {
                     "gpa_requirement": cu["gpa_requirement"],
                     "major_id": cu["major_id"],
                 }
-                for cu in course_units
+                for cu in course_majors
             }
 
             eligible_class_sections = [
                 cs
                 for cs in class_sections
-                if cu_gpa_lookup.get(cs["course_unit_id"]).get("gpa_requirement")
+                if cu_gpa_lookup.get(cs["course_major_id"]).get("gpa_requirement")
                 is None
             ]
 
@@ -374,17 +369,17 @@ def generate_data():
 
                 if not valid_eligible_class_section:
                     break
-                class_section_semester_id = random.choice(valid_eligible_class_section)[
-                    "class_section_semester_id"
+                section_id = random.choice(valid_eligible_class_section)[
+                    "section_id"
                 ]
 
-                if (student_id, class_section_semester_id) not in used_enrollments:
-                    used_enrollments.add((student_id, class_section_semester_id))
+                if (student_id, section_id) not in used_enrollments:
+                    used_enrollments.add((student_id, section_id))
 
                     enrollment = {
-                        "student_enrollment_id": enrollment_id,
+                        "student_section_id": enrollment_id,
                         "student_id": student_id,
-                        "class_section_semester_id": class_section_semester_id,
+                        "section_id": section_id,
                         "enrollment_date": fake.date_between(
                             start_date="-3y", end_date="today"
                         ),
@@ -396,12 +391,9 @@ def generate_data():
                     }
                     enrollments.append(enrollment)
                     f.write(
-                        f"INSERT INTO student_enrollments(student_enrollment_id, student_id, class_section_semester_id, enrollment_date, score) VALUES ({sql_str(enrollment['student_enrollment_id'])}, {sql_str(enrollment['student_id'])}, {sql_str(enrollment['class_section_semester_id'])}, {sql_str(enrollment['enrollment_date'])}, {sql_str(enrollment['score'])});\n"
+                        f"INSERT INTO student_sections(student_section_id, student_id, section_id, enrollment_date, score) VALUES ({sql_str(enrollment['student_section_id'])}, {sql_str(enrollment['student_id'])}, {sql_str(enrollment['section_id'])}, {sql_str(enrollment['enrollment_date'])}, {sql_str(enrollment['score'])});\n"
                     )
                     enrollment_id += 1
-            f.write(
-                "SELECT setval('university.student_enrollments_student_enrollment_id_seq', (SELECT MAX(student_enrollment_id) FROM university.student_enrollments));\n"
-            )
 
         print("Data generation completed successfully.")
     except Exception:
