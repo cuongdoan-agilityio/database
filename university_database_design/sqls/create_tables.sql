@@ -2,11 +2,11 @@ CREATE SCHEMA IF NOT EXISTS university;
 SET search_path TO university, public;
 
 -- DROP TABLES IN CORRECT DEPENDENCY ORDER
-DROP TABLE IF EXISTS student_enrollments CASCADE;
+DROP TABLE IF EXISTS student_sections CASCADE;
 DROP TABLE IF EXISTS timetables CASCADE;
-DROP TABLE IF EXISTS class_section_semesters CASCADE;
+DROP TABLE IF EXISTS sections CASCADE;
 DROP TABLE IF EXISTS prerequisites CASCADE;
-DROP TABLE IF EXISTS course_units CASCADE;
+DROP TABLE IF EXISTS course_majors CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS professors CASCADE;
 DROP TABLE IF EXISTS semesters CASCADE;
@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS departments CASCADE;
 -- Create departments table
 CREATE TABLE departments (
     department_id BIGINT PRIMARY KEY,
-    title VARCHAR NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -27,8 +27,8 @@ CREATE TABLE departments (
 CREATE TABLE majors (
     major_id BIGINT PRIMARY KEY,
     department_id BIGINT NOT NULL,
-    major_code VARCHAR UNIQUE NOT NULL,
-    title VARCHAR NOT NULL,
+    major_code VARCHAR(20) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -38,12 +38,12 @@ CREATE TABLE majors (
 
 -- Craete students table
 CREATE TABLE students (
-    student_id BIGSERIAL PRIMARY KEY,
-    student_code VARCHAR UNIQUE NOT NULL,
-    student_email VARCHAR UNIQUE NOT NULL,
+    student_id BIGINT PRIMARY KEY,
+    student_code VARCHAR(20) UNIQUE NOT NULL,
+    student_email VARCHAR(100) UNIQUE NOT NULL,
     major_id BIGINT NOT NULL,
-    first_name VARCHAR NOT NULL,
-    last_name VARCHAR NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
     enrollment_date DATE NOT NULL,
     birthday DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -54,11 +54,11 @@ CREATE TABLE students (
 
 -- Create professors table
 CREATE TABLE professors (
-    professor_sin VARCHAR PRIMARY KEY,
+    professor_sin VARCHAR(9) PRIMARY KEY,
     department_id BIGINT NOT NULL,
-    professor_email VARCHAR UNIQUE NOT NULL,
-    first_name VARCHAR NOT NULL,
-    last_name VARCHAR NOT NULL,
+    professor_email VARCHAR(100) UNIQUE NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
     birthday DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,17 +69,17 @@ CREATE TABLE professors (
 -- Create courses table
 CREATE TABLE courses (
     course_id BIGINT PRIMARY KEY,
-    course_code VARCHAR UNIQUE NOT NULL,
+    course_code VARCHAR(20) UNIQUE NOT NULL,
     description TEXT,
     course_type VARCHAR NOT NULL,
-    title VARCHAR NOT NULL,
+    title VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create course_units table
-CREATE TABLE course_units (
-    course_unit_id BIGINT PRIMARY KEY,
+-- Create course_majors table
+CREATE TABLE course_majors (
+    course_major_id BIGINT PRIMARY KEY,
     course_id BIGINT NOT NULL,
     major_id BIGINT NOT NULL,
     credit INT NOT NULL,
@@ -94,66 +94,66 @@ CREATE TABLE course_units (
 
 -- Create prerequisites table (composite relationship table)
 CREATE TABLE prerequisites (
+    prerequisite_id BIGINT PRIMARY KEY,
     course_id BIGINT NOT NULL,
     prerequisite_course_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (course_id, prerequisite_course_id),
     FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
-    FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id) ON DELETE CASCADE
+    FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
     CONSTRAINT no_self_prerequisite CHECK (course_id <> prerequisite_id)
 );
 
 -- Create semesters table
 CREATE TABLE semesters (
     semester_id BIGINT PRIMARY KEY,
-    name VARCHAR,
+    name VARCHAR(100),
     start_date DATE,
     end_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create class_section_semesters table
-CREATE TABLE class_section_semesters (
-    class_section_semester_id BIGSERIAL PRIMARY KEY,
-    course_unit_id BIGINT NOT NULL,
+-- Create sections table
+CREATE TABLE sections (
+    section_id BIGINT PRIMARY KEY,
+    course_major_id BIGINT NOT NULL,
     semester_id BIGINT NOT NULL,
-    professor_sin VARCHAR NOT NULL,
+    professor_sin VARCHAR(9) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     max_capacity INT NOT NULL,
 
-    FOREIGN KEY (course_unit_id) REFERENCES course_units(course_unit_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_major_id) REFERENCES course_majors(course_major_id) ON DELETE CASCADE,
     FOREIGN KEY (semester_id) REFERENCES semesters(semester_id) ON DELETE CASCADE,
     FOREIGN KEY (professor_sin) REFERENCES professors(professor_sin) ON DELETE SET NULL
 );
 
 -- Create timetables table
 CREATE TABLE timetables (
-    timetables_id BIGSERIAL PRIMARY KEY,
-    class_section_semester_id BIGINT NOT NULL,
-    room VARCHAR,
+    timetables_id BIGINT PRIMARY KEY,
+    section_id BIGINT NOT NULL,
+    room VARCHAR(20),
     status VARCHAR NOT NULL,
-    schedule_time VARCHAR,
+    schedule_time TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (class_section_semester_id) REFERENCES class_section_semesters(class_section_semester_id) ON DELETE CASCADE
+    FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
--- Create student_enrollments table
-CREATE TABLE student_enrollments (
-    student_enrollment_id BIGSERIAL PRIMARY KEY,
+-- Create student_sections table
+CREATE TABLE student_sections (
+    student_section_id BIGINT PRIMARY KEY,
     student_id BIGINT NOT NULL,
-    class_section_semester_id BIGINT NOT NULL,
+    section_id BIGINT NOT NULL,
     enrollment_date DATE NOT NULL,
     score FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
-    FOREIGN KEY (class_section_semester_id) REFERENCES class_section_semesters(class_section_semester_id) ON DELETE CASCADE
+    FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
 --------------------------------------------------------------------------------------------------------
@@ -171,7 +171,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER score_validation_trigger
-BEFORE INSERT OR UPDATE OF score ON university.student_enrollments
+BEFORE INSERT OR UPDATE OF score ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_score_range();
 
@@ -190,7 +190,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER gpa_validation_trigger
-BEFORE INSERT OR UPDATE OF gpa_requirement ON university.course_units
+BEFORE INSERT OR UPDATE OF gpa_requirement ON university.course_majors
 FOR EACH ROW
 EXECUTE FUNCTION university.check_gpa_range();
 
@@ -210,10 +210,10 @@ BEGIN
     WHERE student_id = NEW.student_id;
 
     -- Get course unit major_id
-    SELECT cu.major_id INTO course_major_id
-    FROM university.class_section_semesters AS css
-    JOIN university.course_units AS cu ON css.course_unit_id = cu.course_unit_id
-    WHERE css.class_section_semester_id = NEW.class_section_semester_id;
+    SELECT cm.major_id INTO course_major_id
+    FROM university.sections AS sect
+    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    WHERE sect.section_id = NEW.section_id;
 
     -- Compare major_ids
     IF student_major_id IS DISTINCT FROM course_major_id THEN
@@ -225,7 +225,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER major_eligibility_check_trigger
-BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.student_enrollments
+BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_major_eligibility();
 
@@ -241,18 +241,18 @@ DECLARE
     course_title VARCHAR;
 BEGIN
     -- Get class section's required GPA
-    SELECT cu.gpa_requirement, c.title
+    SELECT cm.gpa_requirement, c.title
     INTO required_gpa, course_title
-    FROM university.class_section_semesters AS css
-    JOIN university.course_units AS cu ON css.course_unit_id = cu.course_unit_id
-    JOIN university.courses AS c ON cu.course_id = c.course_id
-    WHERE css.class_section_semester_id = NEW.class_section_semester_id;
+    FROM university.sections AS sect
+    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    JOIN university.courses AS c ON cm.course_id = c.course_id
+    WHERE sect.section_id = NEW.section_id;
 
     IF required_gpa IS NOT NULL THEN
         -- Caculate cumulative GPA for the student 
         SELECT AVG(score)
         INTO student_cumulative_gpa
-        FROM university.student_enrollments
+        FROM university.student_sections
         WHERE student_id = NEW.student_id
           -- Only courses have score (completed courses)
           AND score IS NOT NULL;
@@ -271,7 +271,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER check_gpa_prerequisite_trigger
-BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.student_enrollments
+BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_gpa_prerequisite();
 
@@ -288,11 +288,11 @@ DECLARE
     prerequisite_course_title VARCHAR;
     completed BOOLEAN;
 BEGIN
-    SELECT cu.course_id
+    SELECT cm.course_id
     INTO target_course_id
-    FROM university.class_section_semesters AS css
-    JOIN university.course_units AS cu ON css.course_unit_id = cu.course_unit_id
-    WHERE css.class_section_semester_id = NEW.class_section_semester_id;
+    FROM university.sections AS sect
+    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    WHERE sect.section_id = NEW.section_id;
 
     FOR prereq_id IN 
         SELECT prerequisite_course_id
@@ -302,9 +302,9 @@ BEGIN
         completed := FALSE;
 
         SELECT TRUE INTO completed
-        FROM university.student_enrollments AS se
-        JOIN university.class_section_semesters AS css_old ON se.class_section_semester_id = css_old.class_section_semester_id
-        JOIN university.course_units AS cu_old ON css_old.course_unit_id = cu_old.course_unit_id
+        FROM university.student_sections AS se
+        JOIN university.sections AS sect_old ON se.section_id = sect_old.section_id
+        JOIN university.course_majors AS cm_old ON sect_old.course_major_id = cm_old.course_major_id
         
         WHERE se.student_id = NEW.student_id
           AND cu_old.course_id = prereq_id
@@ -321,7 +321,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER check_prerequisites_trigger
-BEFORE INSERT OR UPDATE OF student_id, class_section_semester_id ON university.student_enrollments
+BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_course_prerequisites();
 
@@ -373,33 +373,23 @@ CREATE OR REPLACE FUNCTION university.check_duplicate_course_unit_in_semester()
 RETURNS TRIGGER AS $$
 DECLARE
     new_semester_id INTEGER;
-    new_course_unit_id INTEGER;
+    new_course_major_id INTEGER;
     existing_enrollments_count INTEGER;
 BEGIN
-    SELECT 
-        css.semester_id, 
-        css.course_unit_id
-    INTO 
-        new_semester_id, 
-        new_course_unit_id
-    FROM 
-        university.class_section_semesters css
-    WHERE 
-        css.class_section_semester_id = NEW.class_section_semester_id;
+    SELECT sect.semester_id, sect.course_major_id
+    INTO new_semester_id, new_course_major_id
+    FROM university.sections sect
+    WHERE sect.section_id = NEW.section_id;
 
-    SELECT 
-        COUNT(*)
-    INTO 
-        existing_enrollments_count
-    FROM 
-        university.student_enrollments AS se
-    JOIN 
-        university.class_section_semesters AS css_existing 
-        ON se.class_section_semester_id = css_existing.class_section_semester_id
+    SELECT COUNT(*)
+    INTO existing_enrollments_count
+    FROM university.student_sections AS se
+    JOIN university.sections AS sect_existing 
+        ON se.section_id = sect_existing.section_id
     WHERE se.student_id = NEW.student_id
-        AND css_existing.semester_id = new_semester_id
-        AND css_existing.course_unit_id = new_course_unit_id
-        AND se.student_enrollment_id != COALESCE(NEW.student_enrollment_id, -1); 
+        AND sect_existing.semester_id = new_semester_id
+        AND sect_existing.course_major_id = new_course_major_id
+        AND se.student_section_id != COALESCE(NEW.student_section_id, -1); 
 
     IF existing_enrollments_count > 0 THEN
         RAISE EXCEPTION 'The course has already been registered.';
@@ -409,7 +399,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER before_insert_update_enrollment
-BEFORE INSERT OR UPDATE OF class_section_semester_id, student_id ON university.student_enrollments
+BEFORE INSERT OR UPDATE OF section_id, student_id ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_duplicate_course_unit_in_semester();
 
@@ -423,27 +413,19 @@ DECLARE
     class_max_capacity INTEGER;
     current_enrollment_count INTEGER;
 BEGIN
-    SELECT 
-        css.max_capacity
-    INTO 
-        class_max_capacity
-    FROM 
-        university.class_section_semesters AS css
-    WHERE 
-        css.class_section_semester_id = NEW.class_section_semester_id;
+    SELECT sect.max_capacity
+    INTO class_max_capacity
+    FROM university.sections AS sect
+    WHERE sect.section_id = NEW.section_id;
 
     IF class_max_capacity IS NULL THEN
         RETURN NEW;
     END IF;
 
-    SELECT 
-        COUNT(*)
-    INTO 
-        current_enrollment_count
-    FROM 
-        university.student_enrollments AS se
-    WHERE 
-        se.class_section_semester_id = NEW.class_section_semester_id;
+    SELECT COUNT(*)
+    INTO current_enrollment_count
+    FROM university.student_sections AS se
+    WHERE se.section_id = NEW.section_id;
 
     IF current_enrollment_count >= class_max_capacity THEN
         RAISE EXCEPTION 'Class section capacity exceeded.';
@@ -453,7 +435,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER before_insert_check_capacity
-BEFORE INSERT ON university.student_enrollments
+BEFORE INSERT ON university.student_sections
 FOR EACH ROW
 EXECUTE FUNCTION university.check_max_capacity();
 
