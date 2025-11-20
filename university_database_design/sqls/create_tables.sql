@@ -17,8 +17,8 @@ DROP TABLE IF EXISTS departments CASCADE;
 -- Create departments table
 CREATE TABLE departments (
     department_id BIGINT PRIMARY KEY,
-    title VARCHAR,
-    description TEXT,
+    title VARCHAR NOT NULL,
+    description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,10 +26,10 @@ CREATE TABLE departments (
 -- Create majors table
 CREATE TABLE majors (
     major_id BIGINT PRIMARY KEY,
-    department_id BIGINT,
+    department_id BIGINT NOT NULL,
     major_code VARCHAR UNIQUE NOT NULL,
-    title VARCHAR,
-    description TEXT,
+    title VARCHAR NOT NULL,
+    description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -41,7 +41,7 @@ CREATE TABLE students (
     student_id BIGSERIAL PRIMARY KEY,
     student_code VARCHAR UNIQUE NOT NULL,
     student_email VARCHAR UNIQUE NOT NULL,
-    major_id BIGINT,
+    major_id BIGINT NOT NULL,
     first_name VARCHAR NOT NULL,
     last_name VARCHAR NOT NULL,
     enrollment_date DATE NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE students (
 -- Create professors table
 CREATE TABLE professors (
     professor_sin VARCHAR PRIMARY KEY,
-    department_id BIGINT,
+    department_id BIGINT NOT NULL,
     professor_email VARCHAR UNIQUE NOT NULL,
     first_name VARCHAR NOT NULL,
     last_name VARCHAR NOT NULL,
@@ -71,8 +71,8 @@ CREATE TABLE courses (
     course_id BIGINT PRIMARY KEY,
     course_code VARCHAR UNIQUE NOT NULL,
     description TEXT,
-    course_type VARCHAR,
-    title VARCHAR,
+    course_type VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -80,10 +80,10 @@ CREATE TABLE courses (
 -- Create course_units table
 CREATE TABLE course_units (
     course_unit_id BIGINT PRIMARY KEY,
-    course_id BIGINT,
-    major_id BIGINT,
+    course_id BIGINT NOT NULL,
+    major_id BIGINT NOT NULL,
     credit INT NOT NULL,
-    required BOOLEAN DEFAULT TRUE,
+    required BOOLEAN DEFAULT FALSE,
     gpa_requirement FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -94,13 +94,14 @@ CREATE TABLE course_units (
 
 -- Create prerequisites table (composite relationship table)
 CREATE TABLE prerequisites (
-    course_id BIGINT,
-    prerequisite_course_id BIGINT,
+    course_id BIGINT NOT NULL,
+    prerequisite_course_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (course_id, prerequisite_course_id),
     FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
     FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id) ON DELETE CASCADE
+    CONSTRAINT no_self_prerequisite CHECK (course_id <> prerequisite_id)
 );
 
 -- Create semesters table
@@ -116,9 +117,9 @@ CREATE TABLE semesters (
 -- Create class_section_semesters table
 CREATE TABLE class_section_semesters (
     class_section_semester_id BIGSERIAL PRIMARY KEY,
-    course_unit_id BIGINT,
-    semester_id BIGINT,
-    professor_sin VARCHAR,
+    course_unit_id BIGINT NOT NULL,
+    semester_id BIGINT NOT NULL,
+    professor_sin VARCHAR NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     max_capacity INT NOT NULL,
@@ -131,9 +132,9 @@ CREATE TABLE class_section_semesters (
 -- Create timetables table
 CREATE TABLE timetables (
     timetables_id BIGSERIAL PRIMARY KEY,
-    class_section_semester_id BIGINT,
+    class_section_semester_id BIGINT NOT NULL,
     room VARCHAR,
-    status VARCHAR,
+    status VARCHAR NOT NULL,
     schedule_time VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -144,9 +145,9 @@ CREATE TABLE timetables (
 -- Create student_enrollments table
 CREATE TABLE student_enrollments (
     student_enrollment_id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT,
-    class_section_semester_id BIGINT,
-    enrollment_date DATE,
+    student_id BIGINT NOT NULL,
+    class_section_semester_id BIGINT NOT NULL,
+    enrollment_date DATE NOT NULL,
     score FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -455,3 +456,5 @@ CREATE OR REPLACE TRIGGER before_insert_check_capacity
 BEFORE INSERT ON university.student_enrollments
 FOR EACH ROW
 EXECUTE FUNCTION university.check_max_capacity();
+
+-- Trigger SIN should be string of numbers only
