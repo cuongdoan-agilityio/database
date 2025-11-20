@@ -4,7 +4,7 @@ departments: {
     shape: sql_table
 
     department_id: bigint {constraint: primary_key}
-    department_title: vachar
+    department_title: vachar(255)
     department_description: text
 }
 
@@ -13,10 +13,10 @@ students: {
 
     student_id: bigint {constraint: primary_key}
     major_id: bigint {constraint: foreign_key}
-    student_code: vachar {constraint: unique}
-    student_email: vachar {constraint: unique}
-    student_first_name: vachar
-    student_last_name: vachar
+    student_code: vachar(20) {constraint: unique}
+    student_email: vachar(100) {constraint: unique}
+    student_first_name: vachar(255)
+    student_last_name: vachar(255)
     student_birthdate: date
     enrollment_date: date
 }
@@ -26,9 +26,9 @@ professors: {
 
     professor_sin: vachar(9) {constraint: primary_key}
     department_id: bigint {constraint: foreign_key}
-    professor_email: vachar {constraint: unique}
-    professor_first_name: vachar
-    professor_last_name: vachar
+    professor_email: vachar(100) {constraint: unique}
+    professor_first_name: vachar(255)
+    professor_last_name: vachar(255)
     professor_birthdate: date
 }
 
@@ -36,29 +36,29 @@ majors: {
     shape: sql_table
   
     major_id: bigint {constraint: primary_key}
-    major_code: vachar {constraint: unique}
+    major_code: vachar(20) {constraint: unique}
     department_id: bigint {constraint: foreign_key}
-    major_title: vachar
+    major_title: vachar(255)
     major_description: text
 }
 
-course_units: {
+course_majors: {
     shape: sql_table
 
-    course_unit_id: bigint {constraint: primary_key}
+    course_major_id: bigint {constraint: primary_key}
     course_id: bigint {constraint: foreign_key}
     major_id: bigint {constraint: foreign_key}
-    course_unit_credit: int
-    course_unit_required: boolean {constraint: default: false}
-    course_unit_gpa_requirement: float {constraint: nullable: true}
+    course_major_credit: int
+    course_major_required: boolean {constraint: default: false}
+    course_major_gpa_requirement: float
 }
 
 courses: {
     shape: sql_table
   
     course_id: bigint {constraint: primary_key}
-    course_code: vachar {constraint: unique}
-    course_title: vachar
+    course_code: vachar(20) {constraint: unique}
+    course_title: vachar(255)
     course_description: text
     course_type: vachar {constraint: enum(General, Fundamental, Specialized)} 
 }
@@ -66,24 +66,25 @@ courses: {
 prerequisites: {
     shape: sql_table
 
-    course_id: bigint {constraint: primary_key}
-    prerequisite_course_id: bigint {constraint: primary_key}
+    prerequisite_id: bigint {constraint: primary_key}
+    course_id: bigint {constraint: foreign_key}
+    prerequisite_course_id: bigint {constraint: foreign_key}
 }
 
 semesters: {
     shape: sql_table
 
     semester_id: bigint {constraint: primary_key}
-    semester_name: varchar
+    semester_name: varchar(100)
     start_date: date
     end_date: date
 }
 
-class_section_semesters: {
+sections: {
     shape: sql_table
   
-    class_section_semester_id: bigint {constraint: primary_key}
-    course_unit_id: bigint {constraint: foreign_key}
+    section_id: bigint {constraint: primary_key}
+    course_major_id: bigint {constraint: foreign_key}
     semester_id: bigint {constraint: foreign_key}
     professor_sin: varchar(9) {constraint: foreign_key}
     max_capacity: int
@@ -93,18 +94,18 @@ timetables: {
     shape: sql_table
   
     timetables_id: bigint {constraint: primary_key}
-    class_section_semester_id: bigint {constraint: foreign_key}
-    room: vachar
+    section_id: bigint {constraint: foreign_key}
+    room: vachar(20)
     status: vachar {constraint: enum(Scheduled, Cancelled, Completed)}
     schedule_time: datetime
 }
 
-student_enrollments: {
+student_sections: {
     shape: sql_table
   
-    student_enrollment_id: bigint {constraint: primary_key}
+    student_section_id: bigint {constraint: primary_key}
     student_id: bigint {constraint: foreign_key}
-    class_section_semester_id: bigint {constraint: foreign_key}
+    section_id: bigint {constraint: foreign_key}
     enrollment_date: date
     score: float
 }
@@ -124,17 +125,17 @@ majors.major_id --> students.major_id {
   style.stroke-width: 2
 }
 
-majors.major_id --> course_units.major_id {
+majors.major_id --> course_majors.major_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-courses.course_id --> course_units.course_id {
+courses.course_id --> course_majors.course_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-semesters.semester_id --> class_section_semesters.semester_id {
+semesters.semester_id --> sections.semester_id {
   label: "1:N"
   style.stroke-width: 2
 }
@@ -149,27 +150,27 @@ courses.course_id --> prerequisites.prerequisite_course_id {
   style.stroke-width: 2
 }
 
-course_units.course_unit_id --> class_section_semesters.course_unit_id {
+course_majors.course_major_id --> sections.course_major_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-professors.professor_sin --> class_section_semesters.professor_sin {
+professors.professor_sin --> sections.professor_sin {
   label: "1:N"
   style.stroke-width: 2
 }
 
-class_section_semesters.class_section_semester_id --> student_enrollments.class_section_semester_id {
+sections.section_id --> student_sections.section_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-students.student_id --> student_enrollments.student_id {
+students.student_id --> student_sections.student_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-class_section_semesters.class_section_semester_id --> timetables.class_section_semester_id {
+sections.section_id --> timetables.section_id {
   label: "1:N"
   style.stroke-width: 2
 }
@@ -182,17 +183,17 @@ legend: {
     - **Departments → Major** (1:N): One department has many major
     - **Departments → Professors** (1:N): One department has many professors
     - **Majors → Students** (1:N): One major has many student
-    - **ClassSectionSemesters → Timetables** (1:N): Each section has many lessons
-    - **Semesters → ClassSectionSemesters** (1:N): There are many classes each semester.
-    - **CourseUnits → ClassSectionSemesters** (1:N): Each course_unit  will have many classes.
-    - **Professors → ClassSectionSemesters** (1:N): Each professor is in charge of many class.
+    - **Sections → Timetables** (1:N): Each section has many lessons
+    - **Semesters → Sections** (1:N): There are many classes each semester.
+    - **CourseMajors → Sections** (1:N): Each course_unit  will have many classes.
+    - **Professors → Sections** (1:N): Each professor is in charge of many class.
 
     ### M:N Relationships
     - **Courses ↔ Majors** (M:N): Each major has many courses and each course is part of the curriculum of many majors.
     - **Courses ↔ Courses** (M:N): Each course can requires one or more prerequisite courses.
-    - **Students ↔ ClassSectionSemester** (M:N): Each student studies in many classes and each class has many students.
-
+    - **Students ↔ Sections** (M:N): Each student studies in many classes and each class has many students.
 
     ### Notes
+    - All tables have a create time and an update time.
   |
 }
