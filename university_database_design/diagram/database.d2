@@ -12,21 +12,21 @@ students: {
     shape: sql_table
 
     student_id: bigint {constraint: primary_key}
-    student_code: vachar
-    student_email: vachar
+    major_id: bigint {constraint: foreign_key}
+    student_code: vachar {constraint: unique}
+    student_email: vachar {constraint: unique}
     student_first_name: vachar
     student_last_name: vachar
     student_birthdate: date
-    major_id: bigint {constraint: foreign_key}
     enrollment_date: date
 }
 
 professors: {
     shape: sql_table
 
-    professor_sin: vachar {constraint: primary_key}
+    professor_sin: vachar(9) {constraint: primary_key}
     department_id: bigint {constraint: foreign_key}
-    professor_email: vachar
+    professor_email: vachar {constraint: unique}
     professor_first_name: vachar
     professor_last_name: vachar
     professor_birthdate: date
@@ -36,10 +36,10 @@ majors: {
     shape: sql_table
   
     major_id: bigint {constraint: primary_key}
+    major_code: vachar {constraint: unique}
     department_id: bigint {constraint: foreign_key}
     major_title: vachar
     major_description: text
-    major_code: vachar
 }
 
 course_units: {
@@ -49,25 +49,25 @@ course_units: {
     course_id: bigint {constraint: foreign_key}
     major_id: bigint {constraint: foreign_key}
     course_unit_credit: int
-    course_unit_required: boolean
-    course_unit_gpa_requirement: float
+    course_unit_required: boolean {constraint: default: false}
+    course_unit_gpa_requirement: float {constraint: nullable: true}
 }
 
 courses: {
     shape: sql_table
   
     course_id: bigint {constraint: primary_key}
+    course_code: vachar {constraint: unique}
     course_title: vachar
     course_description: text
-    course_code: vachar
-    course_type: vachar
+    course_type: vachar {constraint: enum(General, Fundamental, Specialized)} 
 }
 
 prerequisites: {
     shape: sql_table
 
-    course_id: bigint {constraint: foreign_key}
-    prerequisite_course_id: bigint {constraint: foreign_key}
+    course_id: bigint {constraint: primary_key}
+    prerequisite_course_id: bigint {constraint: primary_key}
 }
 
 semesters: {
@@ -85,7 +85,7 @@ class_section_semesters: {
     class_section_semester_id: bigint {constraint: primary_key}
     course_unit_id: bigint {constraint: foreign_key}
     semester_id: bigint {constraint: foreign_key}
-    professor_sin: varchar {constraint: foreign_key}
+    professor_sin: varchar(9) {constraint: foreign_key}
     max_capacity: int
 }
 
@@ -95,8 +95,8 @@ timetables: {
     timetables_id: bigint {constraint: primary_key}
     class_section_semester_id: bigint {constraint: foreign_key}
     room: vachar
-    status: vachar
-    schedule_time: vachar
+    status: vachar {constraint: enum(Scheduled, Cancelled, Completed)}
+    schedule_time: datetime
 }
 
 student_enrollments: {
@@ -155,7 +155,7 @@ course_units.course_unit_id --> class_section_semesters.course_unit_id {
 }
 
 professors.professor_sin --> class_section_semesters.professor_sin {
-  label: "1:1"
+  label: "1:N"
   style.stroke-width: 2
 }
 
@@ -178,20 +178,18 @@ legend: {
   shape: text
   label: |md
     ## Database Relationship
-    ### 1:1 Relationships
-    - **Professors → ClassSectionSemesters** (1:1): Each professor is in charge of one class.
-
     ### 1:N Relationships
     - **Departments → Major** (1:N): One department has many major
-    - **Departments → Professors** (1:N): One department has many professor
+    - **Departments → Professors** (1:N): One department has many professors
     - **Majors → Students** (1:N): One major has many student
     - **ClassSectionSemesters → Timetables** (1:N): Each section has many lessons
     - **Semesters → ClassSectionSemesters** (1:N): There are many classes each semester.
-    - **CourseUnits → ClassSectionSemesters** (1:N): 
+    - **CourseUnits → ClassSectionSemesters** (1:N): Each course_unit  will have many classes.
+    - **Professors → ClassSectionSemesters** (1:N): Each professor is in charge of many class.
 
     ### M:N Relationships
-    - **Courses ↔ Majors** (M:N): Each major has many students studying it.
-    - **Courses ↔ Courses** (M:N): Each course requires one or more prerequisite courses.
+    - **Courses ↔ Majors** (M:N): Each major has many courses and each course is part of the curriculum of many majors.
+    - **Courses ↔ Courses** (M:N): Each course can requires one or more prerequisite courses.
     - **Students ↔ ClassSectionSemester** (M:N): Each student studies in many classes and each class has many students.
 
 
