@@ -145,3 +145,73 @@ LIMIT 10;
 -- Retrieve professor count per department using the view
 SELECT * FROM university.professor_count_per_department
 ORDER BY total_professors DESC;
+
+-- Get all available sections for a student to enroll in a given semester
+SET search_path TO university, public;
+
+WITH student_info AS (
+    SELECT 
+        s.student_id,
+        s.major_id,
+        COALESCE(AVG(ss.score), 0.0) AS cumulative_gpa
+    FROM students s
+    LEFT JOIN student_sections ss ON s.student_id = ss.student_id
+        AND ss.score IS NOT NULL
+    WHERE s.student_id = 42 -- :student_id
+    GROUP BY s.student_id, s.major_id
+),
+student_completed_courses AS (
+    SELECT DISTINCT cm.course_id
+    FROM student_sections ss
+    JOIN sections sect ON ss.section_id = sect.section_id
+    JOIN course_majors cm ON sect.course_major_id = cm.course_major_id
+    WHERE ss.student_id = 42 -- :student_id
+      AND ss.score IS NOT NULL
+),
+student_current_enrollments AS (
+    SELECT DISTINCT sect.course_major_id
+    FROM student_sections ss
+    JOIN sections sect ON ss.section_id = sect.section_id
+    WHERE ss.student_id = 42 -- :student_id
+      AND sect.semester_id = 2 -- :semester_id
+),
+section_enrollment_counts AS (
+    SELECT 
+        section_id,
+        COUNT(*) AS current_enrollment
+    FROM student_sections
+    GROUP BY section_id
+)
+
+SELECT DISTINCT
+    s.section_id,
+    c.course_id,
+    c.title AS course_title,
+    p.first_name || ' ' || p.last_name AS professor_name,
+    sem.name AS semester_name
+    -- cm.gpa_requirement
+FROM sections s
+JOIN course_majors cm ON s.course_major_id = cm.course_major_id
+JOIN courses c ON cm.course_id = c.course_id
+join professors p ON s.professor_sin = p.professor_sin
+JOIN semesters sem ON s.semester_id = sem.semester_id
+CROSS JOIN student_info si
+LEFT JOIN section_enrollment_counts sec ON s.section_id = sec.section_id
+
+LEFT JOIN student_current_enrollments sect_enrolled
+    ON s.course_major_id = sect_enrolled.course_major_id
+
+WHERE s.semester_id = 2 -- :semester_id
+    AND si.major_id = cm.major_id
+    AND COALESCE(sec.current_enrollment, 0) < s.max_capacity
+    AND (cm.gpa_requirement IS NULL OR si.cumulative_gpa >= cm.gpa_requirement)
+    AND NOT EXISTS (
+        SELECT 1 
+        FROM prerequisites pr
+        WHERE pr.course_id = c.course_id
+          AND pr.prerequisite_course_id NOT IN (
+              SELECT course_id FROM student_completed_courses
+          )
+    )
+    AND sect_enrolled.course_major_id IS NULL
+ORDER BY c.course_id, s.section_id;

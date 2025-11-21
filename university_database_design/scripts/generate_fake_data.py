@@ -290,6 +290,7 @@ def gen_sections(f, course_majors, semesters, professors):
 
     return items
 
+
 def gen_timetables(f, sections, semesters):
     items = []
     f.write("\n-- Timetables\n")
@@ -344,16 +345,18 @@ def gen_timetables(f, sections, semesters):
 
     return items
 
+
 def gen_prerequisites(f, courses):
     items = set()
     f.write("\n-- Prerequisites\n")
     count = 0
 
     while count < NUM_PREREQUISITES:
-        course_id = random.choice(courses)["course_id"]
+        course = random.choice(courses)
+        course_id = course["course_id"]
         prereq_id = random.choice(courses)["course_id"]
 
-        if course_id != prereq_id:
+        if course["course_type"] != "General" and course_id != prereq_id:
             pair = (course_id, prereq_id)
             if pair not in items:
                 items.add(pair)
@@ -403,7 +406,7 @@ def gen_enrollments(f, students, sections, course_majors):
 
         if (sid, sec_id) not in used:
             used.add((sid, sec_id))
-            score = round(random.uniform(0, 4), 2) if random.random() < 0.7 else None
+            score = round(random.uniform(0, 4), 2) if random.random() < 0.7 else 0.00
 
             f.write(
                 f"INSERT INTO student_sections(student_section_id, student_id, section_id, enrollment_date, score) VALUES "
@@ -411,6 +414,7 @@ def gen_enrollments(f, students, sections, course_majors):
                 f"{sql_str(score)});\n"
             )
             enroll_id += 1
+
 
 def generate_data():
     try:

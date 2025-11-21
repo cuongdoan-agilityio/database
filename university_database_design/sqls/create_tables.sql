@@ -148,7 +148,7 @@ CREATE TABLE student_sections (
     student_id BIGINT NOT NULL,
     section_id BIGINT NOT NULL,
     enrollment_date DATE NOT NULL,
-    score FLOAT,
+    score FLOAT DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
