@@ -36,12 +36,12 @@ Designed for learning and practicing database design, business rules, and SQL qu
 - **Students**: Individual students, with personal information, their major(s).
 - **Courses**: Course definitions.
 - **Prerequisites**: Rules that define which courses must be completed before taking another course (a relationship between courses).
-- **CourseUnits**: CourseUnits: Sub‑units or modules of a course, or credit units associated with a course.
+- **MajorCourses**: Sub‑units or modules of a course, or credit units associated with a course.
 - **Professors**: Professors: Teaching staff (professors, lecturers), linked to Departments, who teach course sections.
-- **ClasssSectionSemesters**: A specific section of a course in a particular semester. A professor is responsible for teaching.
+- **Sections**: A specific section of a course in a particular semester. A professor is responsible for teaching.
 - **Semesters**: Academic terms, used to schedule sections.
 - **TimeTables**: Schedule data – when (day/time) and where (room) each class section meets.
-- **StudentEnrollments**: Records of which students are enrolled in which class‑sections
+- **StudentSections**: Records of which students are enrolled in which class‑sections
 
 ### ERD
 - [link](https://github.com/cuongdoan-agilityio/database/blob/feat/practice/university_database_design/diagram/udb.png)

@@ -12,7 +12,7 @@ NUM_MAJORS = 7
 NUM_STUDENTS = 250
 NUM_PROFESSORS = 20
 NUM_COURSES = 25
-NUM_COURSE_MAJORS = 70
+NUM_MAJOR_COURSES = 70
 NUM_SEMESTERS = 5
 NUM_CLASS_SECTIONS = 200
 NUM_TIMETABLES = 100
@@ -29,6 +29,7 @@ department_names = [
     "Biology",
 ]
 
+
 def sql_str(val):
     if val is None:
         return "NULL"
@@ -42,7 +43,7 @@ def sql_str(val):
 def filter_class_sections_by_major(student_major_id, class_section_list, lookup):
     eligible = []
     for cs in class_section_list:
-        entry = lookup.get(cs["course_major_id"])
+        entry = lookup.get(cs["major_course_id"])
         if entry and entry.get("major_id") == student_major_id:
             eligible.append(cs)
     return eligible
@@ -54,7 +55,7 @@ def write_header_truncate(f):
     f.write("TRUNCATE TABLE timetables RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE sections RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE prerequisites CASCADE;\n")
-    f.write("TRUNCATE TABLE course_majors CASCADE;\n")
+    f.write("TRUNCATE TABLE major_courses CASCADE;\n")
     f.write("TRUNCATE TABLE students RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE professors CASCADE;\n")
     f.write("TRUNCATE TABLE semesters CASCADE;\n")
@@ -110,7 +111,9 @@ def gen_students(f, majors):
         while True:
             first = fake.first_name()
             last = fake.last_name()
-            email = f"{first.lower()}.{last.lower()}.{random.randint(10,99)}@university.edu"
+            email = (
+                f"{first.lower()}.{last.lower()}.{random.randint(10,99)}@university.edu"
+            )
             if email not in used_emails:
                 used_emails.add(email)
                 break
@@ -200,14 +203,14 @@ def gen_courses(f):
     return items
 
 
-def gen_course_majors(f, courses, majors):
+def gen_major_courses(f, courses, majors):
     items = []
     used = set()
-    cm_id = 1
+    mc_id = 1
 
     f.write("\n-- Course Majors\n")
 
-    while cm_id <= NUM_COURSE_MAJORS:
+    while mc_id <= NUM_MAJOR_COURSES:
         course = random.choice(courses)
         major = random.choice(majors)
 
@@ -220,22 +223,22 @@ def gen_course_majors(f, courses, majors):
         gpa_req = round(random.uniform(2.5, 4.0), 2)
 
         row = {
-            "course_major_id": cm_id,
+            "major_course_id": mc_id,
             "course_id": course["course_id"],
             "major_id": major["major_id"],
-            "credit": random.choice([2, 3, 4]),
+            # "credit": random.choice([2, 3, 4]),
             "required": required if course["course_type"] != "General" else True,
             "gpa_requirement": gpa_req if course["course_type"] != "General" else None,
         }
         items.append(row)
 
         f.write(
-            f"INSERT INTO course_majors(course_major_id, course_id, major_id, credit, required, gpa_requirement) VALUES "
-            f"({sql_str(cm_id)}, {sql_str(row['course_id'])}, {sql_str(row['major_id'])}, {sql_str(row['credit'])}, "
+            f"INSERT INTO major_courses(major_course_id, course_id, major_id, required, gpa_requirement) VALUES "
+            f"({sql_str(mc_id)}, {sql_str(row['course_id'])}, {sql_str(row['major_id'])}, "
             f"{sql_str(row['required'])}, {sql_str(row['gpa_requirement'])});\n"
         )
 
-        cm_id += 1
+        mc_id += 1
 
     return items
 
@@ -264,17 +267,17 @@ def gen_semesters(f):
     return items
 
 
-def gen_sections(f, course_majors, semesters, professors):
+def gen_sections(f, major_courses, semesters, professors):
     items = []
     f.write("\n-- Sections\n")
     section_id = 1
 
-    no_gpa = [cu for cu in course_majors if not cu["gpa_requirement"]]
+    no_gpa = [cu for cu in major_courses if not cu["gpa_requirement"]]
 
     while section_id <= NUM_CLASS_SECTIONS:
         row = {
             "section_id": section_id,
-            "course_major_id": random.choice(no_gpa)["course_major_id"],
+            "major_course_id": random.choice(no_gpa)["major_course_id"],
             "semester_id": random.choice(semesters)["semester_id"],
             "professor_sin": random.choice(professors)["professor_sin"],
             "max_capacity": random.randint(20, 60),
@@ -282,8 +285,8 @@ def gen_sections(f, course_majors, semesters, professors):
         items.append(row)
 
         f.write(
-            f"INSERT INTO sections(section_id, course_major_id, semester_id, professor_sin, max_capacity) VALUES "
-            f"({sql_str(section_id)}, {sql_str(row['course_major_id'])}, {sql_str(row['semester_id'])}, "
+            f"INSERT INTO sections(section_id, major_course_id, semester_id, professor_sin, max_capacity) VALUES "
+            f"({sql_str(section_id)}, {sql_str(row['major_course_id'])}, {sql_str(row['semester_id'])}, "
             f"{sql_str(row['professor_sin'])}, {sql_str(row['max_capacity'])});\n"
         )
         section_id += 1
@@ -296,10 +299,7 @@ def gen_timetables(f, sections, semesters):
     f.write("\n-- Timetables\n")
 
     # map semester_id → (start_date, end_date)
-    sem_lookup = {
-        s["semester_id"]: (s["start_date"], s["end_date"])
-        for s in semesters
-    }
+    sem_lookup = {s["semester_id"]: (s["start_date"], s["end_date"]) for s in semesters}
 
     selected = random.sample(sections, min(NUM_TIMETABLES, len(sections)))
     tid = 1
@@ -313,18 +313,20 @@ def gen_timetables(f, sections, semesters):
 
             # random date during semester
             delta_days = (sem_end - sem_start).days
-            random_day = sem_start + datetime.timedelta(days=random.randint(0, delta_days))
+            random_day = sem_start + datetime.timedelta(
+                days=random.randint(0, delta_days)
+            )
 
             # random time between 8:00 and 17:00
             random_hour = random.randint(8, 17)
-            random_minute = random.choice([0, 30])   # hoặc random.randint(0, 59)
-            
+            random_minute = random.choice([0, 15, 30, 45])
+
             schedule_dt = datetime.datetime(
                 random_day.year,
                 random_day.month,
                 random_day.day,
                 random_hour,
-                random_minute
+                random_minute,
             )
 
             row = {
@@ -369,20 +371,21 @@ def gen_prerequisites(f, courses):
     return items
 
 
-def gen_enrollments(f, students, sections, course_majors):
+def gen_enrollments(f, students, sections, major_courses):
     f.write("\n-- Student Enrollments\n")
 
     lookup = {
-        cu["course_major_id"]: {
+        cu["major_course_id"]: {
             "gpa_requirement": cu["gpa_requirement"],
             "major_id": cu["major_id"],
         }
-        for cu in course_majors
+        for cu in major_courses
     }
 
     eligible_sections = [
-        cs for cs in sections
-        if lookup[cs["course_major_id"]]["gpa_requirement"] is None
+        cs
+        for cs in sections
+        if lookup[cs["major_course_id"]]["gpa_requirement"] is None
     ]
 
     used = set()
@@ -426,12 +429,12 @@ def generate_data():
             students = gen_students(f, majors)
             professors = gen_professors(f, departments)
             courses = gen_courses(f)
-            course_majors = gen_course_majors(f, courses, majors)
+            major_courses = gen_major_courses(f, courses, majors)
             semesters = gen_semesters(f)
-            sections = gen_sections(f, course_majors, semesters, professors)
+            sections = gen_sections(f, major_courses, semesters, professors)
             gen_timetables(f, sections, semesters)
             gen_prerequisites(f, courses)
-            gen_enrollments(f, students, sections, course_majors)
+            gen_enrollments(f, students, sections, major_courses)
 
         print("Data generation completed successfully.")
     except Exception:

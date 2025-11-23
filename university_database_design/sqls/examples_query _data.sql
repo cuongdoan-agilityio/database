@@ -14,11 +14,11 @@ SELECT
     s.semester_id,
     s.name AS semester_name,
     COUNT(sect.section_id) AS total_class_sections,
-    COUNT(DISTINCT sect.course_major_id) AS total_unique_courses_offered,
+    COUNT(DISTINCT sect.major_course_id) AS total_unique_courses_offered,
     COUNT(DISTINCT cm.course_id) AS total_course
 FROM university.semesters s
 LEFT JOIN university.sections sect ON s.semester_id = sect.semester_id
-LEFT JOIN university.course_majors cm ON sect.course_major_id = cm.course_major_id
+LEFT JOIN university.major_courses cm ON sect.major_course_id = cm.major_course_id
 GROUP BY s.semester_id, s.name
 ORDER BY s.semester_id;
 
@@ -28,12 +28,12 @@ SELECT
     s.student_code,
     s.first_name,
     s.last_name,
-    COUNT(sect.course_major_id) AS total_courses_enrolled
+    COUNT(sect.major_course_id) AS total_courses_enrolled
 FROM university.students s
 JOIN university.student_sections ss ON s.student_id = ss.student_id
 JOIN university.sections sect ON ss.section_id = sect.section_id
 GROUP BY s.student_id, s.student_code, s.first_name, s.last_name
-HAVING COUNT(sect.course_major_id) > 2
+HAVING COUNT(sect.major_course_id) > 2
 ORDER BY total_courses_enrolled DESC, s.last_name ASC;
 
 -- List all active timetable entries with professor name, course name, semester, and room
@@ -46,7 +46,7 @@ SELECT
 FROM university.timetables t
 JOIN university.sections sect ON t.section_id = sect.section_id
 JOIN university.professors p ON sect.professor_sin = p.professor_sin
-JOIN university.course_majors cm ON sect.course_major_id = cm.course_major_id
+JOIN university.major_courses cm ON sect.major_course_id = cm.major_course_id
 JOIN university.courses c ON cm.course_id = c.course_id
 JOIN university.semesters s ON sect.semester_id = s.semester_id
 WHERE t.status = 'Scheduled'
@@ -59,8 +59,8 @@ SELECT
     c.title AS course_title,
     COUNT(ss.student_section_id) AS total_enrollments
 FROM university.courses c
-JOIN university.course_majors cm ON c.course_id = cm.course_id
-JOIN university.sections sect ON cm.course_major_id = sect.course_major_id
+JOIN university.major_courses cm ON c.course_id = cm.course_id
+JOIN university.sections sect ON cm.major_course_id = sect.major_course_id
 LEFT JOIN university.student_sections ss ON sect.section_id = ss.section_id
 GROUP BY c.course_id, c.course_code, c.title
 ORDER BY enrollment_rank ASC, total_enrollments DESC;
@@ -85,7 +85,7 @@ SELECT
 FROM
     university.sections sect
 JOIN
-    university.course_majors cm ON sect.course_major_id = cm.course_major_id
+    university.major_courses cm ON sect.major_course_id = cm.major_course_id
 JOIN
     university.courses c ON cm.course_id = c.course_id
 JOIN university.semesters s ON sect.semester_id = s.semester_id
@@ -164,12 +164,12 @@ student_completed_courses AS (
     SELECT DISTINCT cm.course_id
     FROM student_sections ss
     JOIN sections sect ON ss.section_id = sect.section_id
-    JOIN course_majors cm ON sect.course_major_id = cm.course_major_id
+    JOIN major_courses cm ON sect.major_course_id = cm.major_course_id
     WHERE ss.student_id = 42 -- :student_id
       AND ss.score IS NOT NULL
 ),
 student_current_enrollments AS (
-    SELECT DISTINCT sect.course_major_id
+    SELECT DISTINCT sect.major_course_id
     FROM student_sections ss
     JOIN sections sect ON ss.section_id = sect.section_id
     WHERE ss.student_id = 42 -- :student_id
@@ -191,7 +191,7 @@ SELECT DISTINCT
     sem.name AS semester_name
     -- cm.gpa_requirement
 FROM sections s
-JOIN course_majors cm ON s.course_major_id = cm.course_major_id
+JOIN major_courses cm ON s.major_course_id = cm.major_course_id
 JOIN courses c ON cm.course_id = c.course_id
 join professors p ON s.professor_sin = p.professor_sin
 JOIN semesters sem ON s.semester_id = sem.semester_id
@@ -199,7 +199,7 @@ CROSS JOIN student_info si
 LEFT JOIN section_enrollment_counts sec ON s.section_id = sec.section_id
 
 LEFT JOIN student_current_enrollments sect_enrolled
-    ON s.course_major_id = sect_enrolled.course_major_id
+    ON s.major_course_id = sect_enrolled.major_course_id
 
 WHERE s.semester_id = 2 -- :semester_id
     AND si.major_id = cm.major_id
@@ -213,5 +213,5 @@ WHERE s.semester_id = 2 -- :semester_id
               SELECT course_id FROM student_completed_courses
           )
     )
-    AND sect_enrolled.course_major_id IS NULL
+    AND sect_enrolled.major_course_id IS NULL
 ORDER BY c.course_id, s.section_id;

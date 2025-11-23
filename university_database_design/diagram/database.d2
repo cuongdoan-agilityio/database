@@ -42,15 +42,15 @@ majors: {
     major_description: text
 }
 
-course_majors: {
+major_courses: {
     shape: sql_table
 
-    course_major_id: bigint {constraint: primary_key}
+    major_course_id: bigint {constraint: primary_key}
     course_id: bigint {constraint: foreign_key}
     major_id: bigint {constraint: foreign_key}
-    course_major_credit: int
-    course_major_required: boolean {constraint: default: false}
-    course_major_gpa_requirement: float
+    # major_course_credit: int
+    major_course_required: boolean {constraint: default: false}
+    major_course_gpa_requirement: float
 }
 
 courses: {
@@ -60,16 +60,16 @@ courses: {
     course_code: vachar(20) {constraint: unique}
     course_title: vachar(255)
     course_description: text
-    course_type: vachar {constraint: enum(General, Fundamental, Specialized)} 
+    course_type: vachar {constraint: enum(General, Fundamental, Specialized)}
 }
 
-prerequisites: {
-    shape: sql_table
+# prerequisites: {
+#     shape: sql_table
 
-    prerequisite_id: bigint {constraint: primary_key}
-    course_id: bigint {constraint: foreign_key}
-    prerequisite_course_id: bigint {constraint: foreign_key}
-}
+#     prerequisite_id: bigint {constraint: primary_key}
+#     course_id: bigint {constraint: foreign_key}
+#     prerequisite_course_id: bigint {constraint: foreign_key}
+# }
 
 semesters: {
     shape: sql_table
@@ -84,7 +84,7 @@ sections: {
     shape: sql_table
   
     section_id: bigint {constraint: primary_key}
-    course_major_id: bigint {constraint: foreign_key}
+    major_course_id: bigint {constraint: foreign_key}
     semester_id: bigint {constraint: foreign_key}
     professor_sin: varchar(9) {constraint: foreign_key}
     max_capacity: int
@@ -125,12 +125,12 @@ majors.major_id --> students.major_id {
   style.stroke-width: 2
 }
 
-majors.major_id --> course_majors.major_id {
+majors.major_id --> major_courses.major_id {
   label: "1:N"
   style.stroke-width: 2
 }
 
-courses.course_id --> course_majors.course_id {
+courses.course_id --> major_courses.course_id {
   label: "1:N"
   style.stroke-width: 2
 }
@@ -140,17 +140,17 @@ semesters.semester_id --> sections.semester_id {
   style.stroke-width: 2
 }
 
-courses.course_id --> prerequisites.course_id {
-  label: "1:N"
-  style.stroke-width: 2
-}
+# courses.course_id --> prerequisites.course_id {
+#   label: "1:N"
+#   style.stroke-width: 2
+# }
 
-courses.course_id --> prerequisites.prerequisite_course_id {
-  label: "1:N"
-  style.stroke-width: 2
-}
+# courses.course_id --> prerequisites.prerequisite_course_id {
+#   label: "1:N"
+#   style.stroke-width: 2
+# }
 
-course_majors.course_major_id --> sections.course_major_id {
+major_courses.major_course_id --> sections.major_course_id {
   label: "1:N"
   style.stroke-width: 2
 }

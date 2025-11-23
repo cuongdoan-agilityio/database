@@ -17,8 +17,8 @@ SELECT
     c.title AS course_title,
     COUNT(se.student_section_id) AS total_enrollments
 FROM university.courses c
-JOIN university.course_majors cm ON c.course_id = cm.course_id
-JOIN university.sections sect ON cm.course_major_id = sect.course_major_id
+JOIN university.major_courses cm ON c.course_id = cm.course_id
+JOIN university.sections sect ON cm.major_course_id = sect.major_course_id
 LEFT JOIN university.student_sections se ON sect.section_id = se.section_id
 GROUP BY c.course_id, c.course_code, c.title;
 

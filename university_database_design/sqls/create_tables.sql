@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS student_sections CASCADE;
 DROP TABLE IF EXISTS timetables CASCADE;
 DROP TABLE IF EXISTS sections CASCADE;
 DROP TABLE IF EXISTS prerequisites CASCADE;
-DROP TABLE IF EXISTS course_majors CASCADE;
+DROP TABLE IF EXISTS major_courses CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS professors CASCADE;
 DROP TABLE IF EXISTS semesters CASCADE;
@@ -77,12 +77,12 @@ CREATE TABLE courses (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create course_majors table
-CREATE TABLE course_majors (
-    course_major_id BIGINT PRIMARY KEY,
+-- Create major_courses table
+CREATE TABLE major_courses (
+    major_course_id BIGINT PRIMARY KEY,
     course_id BIGINT NOT NULL,
     major_id BIGINT NOT NULL,
-    credit INT NOT NULL,
+    -- credit INT NOT NULL,
     required BOOLEAN DEFAULT FALSE,
     gpa_requirement FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -101,7 +101,8 @@ CREATE TABLE prerequisites (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
     FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
-    CONSTRAINT no_self_prerequisite CHECK (course_id <> prerequisite_id)
+    CONSTRAINT no_self_prerequisite CHECK (course_id <> prerequisite_course_id),
+    CONSTRAINT no_duplicate_prerequisite UNIQUE (course_id, prerequisite_course_id)
 );
 
 -- Create semesters table
@@ -117,14 +118,14 @@ CREATE TABLE semesters (
 -- Create sections table
 CREATE TABLE sections (
     section_id BIGINT PRIMARY KEY,
-    course_major_id BIGINT NOT NULL,
+    major_course_id BIGINT NOT NULL,
     semester_id BIGINT NOT NULL,
     professor_sin VARCHAR(9) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     max_capacity INT NOT NULL,
 
-    FOREIGN KEY (course_major_id) REFERENCES course_majors(course_major_id) ON DELETE CASCADE,
+    FOREIGN KEY (major_course_id) REFERENCES major_courses(major_course_id) ON DELETE CASCADE,
     FOREIGN KEY (semester_id) REFERENCES semesters(semester_id) ON DELETE CASCADE,
     FOREIGN KEY (professor_sin) REFERENCES professors(professor_sin) ON DELETE SET NULL
 );
@@ -190,7 +191,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER gpa_validation_trigger
-BEFORE INSERT OR UPDATE OF gpa_requirement ON university.course_majors
+BEFORE INSERT OR UPDATE OF gpa_requirement ON university.major_courses
 FOR EACH ROW
 EXECUTE FUNCTION university.check_gpa_range();
 
@@ -202,7 +203,7 @@ CREATE OR REPLACE FUNCTION university.check_major_eligibility()
 RETURNS TRIGGER AS $$
 DECLARE
     student_major_id BIGINT;
-    course_major_id BIGINT;
+    major_course_id BIGINT;
 BEGIN
     -- Get student major_id
     SELECT major_id INTO student_major_id
@@ -210,13 +211,13 @@ BEGIN
     WHERE student_id = NEW.student_id;
 
     -- Get course unit major_id
-    SELECT cm.major_id INTO course_major_id
+    SELECT cm.major_id INTO major_course_id
     FROM university.sections AS sect
-    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
     WHERE sect.section_id = NEW.section_id;
 
     -- Compare major_ids
-    IF student_major_id IS DISTINCT FROM course_major_id THEN
+    IF student_major_id IS DISTINCT FROM major_course_id THEN
         RAISE EXCEPTION 'Major mismatch: Student major_id does not match Course Unit major_id.';
     END IF;
     
@@ -244,7 +245,7 @@ BEGIN
     SELECT cm.gpa_requirement, c.title
     INTO required_gpa, course_title
     FROM university.sections AS sect
-    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
     JOIN university.courses AS c ON cm.course_id = c.course_id
     WHERE sect.section_id = NEW.section_id;
 
@@ -291,7 +292,7 @@ BEGIN
     SELECT cm.course_id
     INTO target_course_id
     FROM university.sections AS sect
-    JOIN university.course_majors AS cm ON sect.course_major_id = cm.course_major_id
+    JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
     WHERE sect.section_id = NEW.section_id;
 
     FOR prereq_id IN 
@@ -304,7 +305,7 @@ BEGIN
         SELECT TRUE INTO completed
         FROM university.student_sections AS se
         JOIN university.sections AS sect_old ON se.section_id = sect_old.section_id
-        JOIN university.course_majors AS cm_old ON sect_old.course_major_id = cm_old.course_major_id
+        JOIN university.major_courses AS cm_old ON sect_old.major_course_id = cm_old.major_course_id
         
         WHERE se.student_id = NEW.student_id
           AND cm_old.course_id = prereq_id
@@ -373,11 +374,11 @@ CREATE OR REPLACE FUNCTION university.check_duplicate_course_unit_in_semester()
 RETURNS TRIGGER AS $$
 DECLARE
     new_semester_id INTEGER;
-    new_course_major_id INTEGER;
+    new_major_course_id INTEGER;
     existing_enrollments_count INTEGER;
 BEGIN
-    SELECT sect.semester_id, sect.course_major_id
-    INTO new_semester_id, new_course_major_id
+    SELECT sect.semester_id, sect.major_course_id
+    INTO new_semester_id, new_major_course_id
     FROM university.sections sect
     WHERE sect.section_id = NEW.section_id;
 
@@ -388,7 +389,7 @@ BEGIN
         ON se.section_id = sect_existing.section_id
     WHERE se.student_id = NEW.student_id
         AND sect_existing.semester_id = new_semester_id
-        AND sect_existing.course_major_id = new_course_major_id
+        AND sect_existing.major_course_id = new_major_course_id
         AND se.student_section_id != COALESCE(NEW.student_section_id, -1); 
 
     IF existing_enrollments_count > 0 THEN
@@ -455,7 +456,7 @@ BEFORE INSERT OR UPDATE OF professor_sin ON university.professors
 FOR EACH ROW
 EXECUTE FUNCTION university.check_professor_sin_format();
 
--- Trigger schiduled_time should be in the semester date range
+-- Trigger scheduled_time should be in the semester date range
 CREATE OR REPLACE FUNCTION university.check_schedule_time_in_semester_range()
 RETURNS TRIGGER AS $$
 DECLARE
