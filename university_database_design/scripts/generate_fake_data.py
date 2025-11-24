@@ -29,6 +29,232 @@ department_names = [
     "Biology",
 ]
 
+course_maping = {
+    "calculus_i": {
+        "id": 1,
+        "name": "Calculus I",
+        "code": "calculus_i",
+        "prerequisite_course_id": None,
+        "course_type": "General",
+        "required": True,
+    },
+    "calculus_ii": {
+        "id": 9,
+        "name": "Calculus II",
+        "code": "calculus_ii",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [1]
+    },
+    "linear_algebra": {
+        "id": 10,
+        "name": "Linear Algebra",
+        "code": "linear_algebra",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [1]
+    },
+    "probability_and_statistics": {
+        "id": 21,
+        "name": "Probability and Statistics",
+        "code": "probability_and_statistics",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [10]
+    },
+    "classical_mechanics": {
+        "id": 11,
+        "name": "Classical Mechanics",
+        "code": "classical_mechanics",
+        "prerequisite_course_id": [1],
+        "required": True,
+        "course_type": "Fundamental",
+    },
+    "electromagnetism": {
+        "id": 22,
+        "name": "Electromagnetism",
+        "code": "electromagnetism",
+        "prerequisite_course_id": [11],
+        "required": True,
+        "course_type": "Specialized"
+    },
+    "introductory_quantum_physics": {
+        "id": 30,
+        "name": "Introductory Quantum Physics",
+        "code": "introductory_quantum_physics",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [22]
+    },
+    "discrete_mathematics": {
+        "id": 2,
+        "name": "Discrete Mathematics",
+        "code": "discrete_mathematics",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "data_structures_and_algorithms": {
+        "id": 12,
+        "name": "Data Structures and Algorithms",
+        "code": "data_structures_and_algorithms",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [2, 3]
+    },
+    "introduction_to_programming": {
+        "id": 3,
+        "name": "Introduction to Programming",
+        "code": "introduction_to_programming",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "database_systems": {
+        "id": 23,
+        "name": "Database Systems",
+        "code": "database_systems",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [13, 14]
+    },
+    "computer_architecture": {
+        "id": 24,
+        "name": "Computer Architecture",
+        "code": "computer_architecture",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [13]
+    },
+    "operating_systems": {
+        "id": 25,
+        "name": "Operating Systems",
+        "code": "operating_systems",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [13]
+    },
+    "object_oriented_programming": {
+        "id": 14,
+        "name": "Object-Oriented Programming",
+        "code": "object_oriented_programming",
+        "prerequisite_course_id": [3],
+        "required": True,
+        "course_type": "Fundamental"
+    },
+    "introduction_to_literary_theory": {
+        "id": 4,
+        "name": "Introduction to Literary Theory",
+        "code": "introduction_to_literary_theory",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "modern_vietnamese_literature": {
+        "id": 15,
+        "name": "Modern Vietnamese Literature",
+        "code": "modern_vietnamese_literature",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [4]
+    },
+    "literary_language_analysis": {
+        "id": 16,
+        "name": "Literary Language Analysis",
+        "code": "literary_language_analysis",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [4]
+    },
+    "general_linguistics": {
+        "id": 5,
+        "name": "General Linguistics",
+        "code": "general_linguistics",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "fundamentals_of_cartography": {
+        "id": 6,
+        "name": "Fundamentals of Cartography",
+        "code": "fundamentals_of_cartography",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "physical_geography": {
+        "id": 17,
+        "name": "Physical Geography",
+        "code": "physical_geography",
+        "prerequisite_course_id": [6],
+        "required": True,
+        "course_type": "Fundamental"
+    },
+        "economic_and_social_geography": {
+        "id": 27,
+        "name": "Economic and Social Geography",
+        "code": "economic_and_social_geography",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [17]
+    },
+    "introduction_to_historical_studies": {
+        "id": 7,
+        "name": "Introduction to Historical Studies",
+        "code": "introduction_to_historical_studies",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "medieval_vietnamese_history": {
+        "id": 18,
+        "name": "Medieval Vietnamese History",
+        "code": "medieval_vietnamese_history",
+        "course_type": "Fundamental",
+        "required": True,
+        "prerequisite_course_id": [7]
+    },
+    "Modern World History": {
+        "id": 19,
+        "name": "Modern World History",
+        "code": "modern_world_history",
+        "prerequisite_course_id": [7],
+        "required": True,
+        "course_type": "Fundamental"
+    },
+    "historical_research_methods": {
+        "id": 28,
+        "name": "Historical Research Methods",
+        "code": "historical_research_methods",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [19]
+    },
+    "general_chemistry": {
+        "id": 8,
+        "name": "General Chemistry",
+        "code": "general_chemistry",
+        "prerequisite_course_id": None,
+        "required": True,
+        "course_type": "General"
+    },
+    "cell_biology": {
+        "id": 20,
+        "name": "Cell Biology",
+        "code": "cell_biology",
+        "prerequisite_course_id": [8],
+        "required": True,
+        "course_type": "Fundamental"
+    },
+    "genetics": {
+        "id": 29,
+        "name": "Genetics",
+        "code": "genetics",
+        "course_type": "Specialized",
+        "required": True,
+        "prerequisite_course_id": [20]
+    }
+}
 
 def sql_str(val):
     if val is None:
@@ -37,6 +263,8 @@ def sql_str(val):
         return "TRUE" if val else "FALSE"
     if isinstance(val, (int, float)):
         return f"{val:.2f}" if isinstance(val, float) else str(val)
+    if isinstance(val, list):
+        return f"ARRAY{val}" if isinstance(val, list) else "NULL"
     return "'{}'".format(str(val).replace("'", "''"))
 
 
@@ -54,7 +282,6 @@ def write_header_truncate(f):
     f.write("TRUNCATE TABLE student_sections RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE timetables RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE sections RESTART IDENTITY CASCADE;\n")
-    f.write("TRUNCATE TABLE prerequisites CASCADE;\n")
     f.write("TRUNCATE TABLE major_courses CASCADE;\n")
     f.write("TRUNCATE TABLE students RESTART IDENTITY CASCADE;\n")
     f.write("TRUNCATE TABLE professors CASCADE;\n")
@@ -175,30 +402,31 @@ def gen_professors(f, departments):
     return items
 
 
+def extract_courses_from_mapping(course_mapping, courses_list):
+    """
+    Recursively extract all courses from the course_mapping structure.
+    """
+    for course_key, course_data in course_mapping.items():
+        courses_list.append({
+            "course_id": course_data["id"],
+            "course_code": course_data["code"],
+            "title": course_data["name"],
+            "course_type": course_data.get("course_type", "Specialized"),
+            "prerequisite_course_id": course_data.get("prerequisite_course_id", None),
+            "description": f"{course_data['name']} {fake.sentence()}",
+            "required": course_data["required"],
+        })
+
+
 def gen_courses(f):
     items = []
-    used_codes = set()
     f.write("\n-- Courses\n")
-
-    for i in range(1, NUM_COURSES + 1):
-        while True:
-            code = f"{random.choice(['CS','MA','BI','HI','PH','GE','LI'])}{random.randint(100,499)}"
-            if code not in used_codes:
-                used_codes.add(code)
-                break
-
-        row = {
-            "course_id": i,
-            "course_code": code,
-            "title": fake.sentence(nb_words=3).replace(".", ""),
-            "course_type": random.choice(["General", "Fundamental", "Specialized"]),
-            "description": fake.sentence(),
-        }
-        items.append(row)
-
+    extract_courses_from_mapping(course_maping, items)
+    items.sort(key=lambda x: x["course_id"])
+    for row in items:
         f.write(
-            f"INSERT INTO courses(course_id, course_code, title, course_type, description) "
-            f"VALUES ({sql_str(i)}, {sql_str(code)}, {sql_str(row['title'])}, {sql_str(row['course_type'])}, {sql_str(row['description'])});\n"
+            f"INSERT INTO courses(course_id, course_code, title, course_type, prerequisite_course_id, required, description) "
+            f"VALUES ({sql_str(row['course_id'])}, {sql_str(row['course_code'])}, {sql_str(row['title'])}, {sql_str(row['course_type'])}, {sql_str(row['prerequisite_course_id'])}, {sql_str(row['required'])}, {sql_str(row['description'])});\n"
         )
     return items
 
@@ -233,9 +461,8 @@ def gen_major_courses(f, courses, majors):
         items.append(row)
 
         f.write(
-            f"INSERT INTO major_courses(major_course_id, course_id, major_id, required, gpa_requirement) VALUES "
-            f"({sql_str(mc_id)}, {sql_str(row['course_id'])}, {sql_str(row['major_id'])}, "
-            f"{sql_str(row['required'])}, {sql_str(row['gpa_requirement'])});\n"
+            f"INSERT INTO major_courses(major_course_id, course_id, major_id) VALUES "
+            f"({sql_str(mc_id)}, {sql_str(row['course_id'])}, {sql_str(row['major_id'])});\n"
         )
 
         mc_id += 1
@@ -348,29 +575,6 @@ def gen_timetables(f, sections, semesters):
     return items
 
 
-def gen_prerequisites(f, courses):
-    items = set()
-    f.write("\n-- Prerequisites\n")
-    count = 0
-
-    while count < NUM_PREREQUISITES:
-        course = random.choice(courses)
-        course_id = course["course_id"]
-        prereq_id = random.choice(courses)["course_id"]
-
-        if course["course_type"] != "General" and course_id != prereq_id:
-            pair = (course_id, prereq_id)
-            if pair not in items:
-                items.add(pair)
-                f.write(
-                    f"INSERT INTO prerequisites(prerequisite_id, course_id, prerequisite_course_id) VALUES "
-                    f"({sql_str(count + 1)}, {sql_str(course_id)}, {sql_str(prereq_id)});\n"
-                )
-                count += 1
-
-    return items
-
-
 def gen_enrollments(f, students, sections, major_courses):
     f.write("\n-- Student Enrollments\n")
 
@@ -433,7 +637,6 @@ def generate_data():
             semesters = gen_semesters(f)
             sections = gen_sections(f, major_courses, semesters, professors)
             gen_timetables(f, sections, semesters)
-            gen_prerequisites(f, courses)
             gen_enrollments(f, students, sections, major_courses)
 
         print("Data generation completed successfully.")

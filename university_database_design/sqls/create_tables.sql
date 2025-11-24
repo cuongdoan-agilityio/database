@@ -69,7 +69,9 @@ CREATE TABLE professors (
 -- Create courses table
 CREATE TABLE courses (
     course_id BIGINT PRIMARY KEY,
-    course_code VARCHAR(20) UNIQUE NOT NULL,
+    prerequisite_course_id BIGINT[],
+    course_code VARCHAR(50) NOT NULL,
+    required BOOLEAN DEFAULT FALSE,
     description TEXT,
     course_type VARCHAR NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -83,8 +85,8 @@ CREATE TABLE major_courses (
     course_id BIGINT NOT NULL,
     major_id BIGINT NOT NULL,
     -- credit INT NOT NULL,
-    required BOOLEAN DEFAULT FALSE,
-    gpa_requirement FLOAT,
+    -- required BOOLEAN DEFAULT FALSE,
+    -- gpa_requirement FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -177,25 +179,6 @@ FOR EACH ROW
 EXECUTE FUNCTION university.check_score_range();
 
 --------------------------------------------------------------------------------------------------------
--- BR: Course GPA on a 4-point scale
--- Rule: Course gpa requirement score range between 0.00 and 4.00
--- Trigger when adding new or updating course GPA prerequisite value
-CREATE OR REPLACE FUNCTION university.check_gpa_range()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.gpa_requirement IS NOT NULL AND (NEW.gpa_requirement < 0.00 OR NEW.gpa_requirement > 4.00) THEN
-        RAISE EXCEPTION 'Invalid gpa prerequisite, must be between 0.00 and 4.00.';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER gpa_validation_trigger
-BEFORE INSERT OR UPDATE OF gpa_requirement ON university.major_courses
-FOR EACH ROW
-EXECUTE FUNCTION university.check_gpa_range();
-
---------------------------------------------------------------------------------------------------------
 -- BR: Students are only allowed to register for courses included in the curriculum.
 -- Rule: The student's major code must match the major code of the registered course.
 -- Trigger when adding new or updating student_enrollemnt record, check major eligibility when student enrolls in a class section.
@@ -234,47 +217,47 @@ EXECUTE FUNCTION university.check_major_eligibility();
 -- BR: Students can only register for courses when they satisfy the minimum average score of the subject.
 -- Rule: The GPA score of the courses studied must be greater than or equal to the GPA required of the course.
 -- Triggered when adding a new student_enrollemnt record, calculates the GPA of the courses studied, compares it with the required GPQ of the course want to register.
-CREATE OR REPLACE FUNCTION university.check_gpa_prerequisite()
-RETURNS TRIGGER AS $$
-DECLARE
-    required_gpa DECIMAL;
-    student_cumulative_gpa DECIMAL;
-    course_title VARCHAR;
-BEGIN
-    -- Get class section's required GPA
-    SELECT cm.gpa_requirement, c.title
-    INTO required_gpa, course_title
-    FROM university.sections AS sect
-    JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
-    JOIN university.courses AS c ON cm.course_id = c.course_id
-    WHERE sect.section_id = NEW.section_id;
+-- CREATE OR REPLACE FUNCTION university.check_gpa_prerequisite()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--     required_gpa DECIMAL;
+--     student_cumulative_gpa DECIMAL;
+--     course_title VARCHAR;
+-- BEGIN
+--     -- Get class section's required GPA
+--     SELECT cm.gpa_requirement, c.title
+--     INTO required_gpa, course_title
+--     FROM university.sections AS sect
+--     JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
+--     JOIN university.courses AS c ON cm.course_id = c.course_id
+--     WHERE sect.section_id = NEW.section_id;
 
-    IF required_gpa IS NOT NULL THEN
-        -- Caculate cumulative GPA for the student 
-        SELECT AVG(score)
-        INTO student_cumulative_gpa
-        FROM university.student_sections
-        WHERE student_id = NEW.student_id
-          -- Only courses have score (completed courses)
-          AND score IS NOT NULL;
+--     IF required_gpa IS NOT NULL THEN
+--         -- Caculate cumulative GPA for the student 
+--         SELECT AVG(score)
+--         INTO student_cumulative_gpa
+--         FROM university.student_sections
+--         WHERE student_id = NEW.student_id
+--           -- Only courses have score (completed courses)
+--           AND score IS NOT NULL;
 
-        -- Coalesce student_cumulative_gpa to 0.0
-        student_cumulative_gpa := COALESCE(student_cumulative_gpa, 0.0);
+--         -- Coalesce student_cumulative_gpa to 0.0
+--         student_cumulative_gpa := COALESCE(student_cumulative_gpa, 0.0);
 
-        -- Compare GPA
-        IF student_cumulative_gpa < required_gpa THEN
-            RAISE EXCEPTION 'GPA prerequisite not met for course.';
-        END IF;
-    END IF;
+--         -- Compare GPA
+--         IF student_cumulative_gpa < required_gpa THEN
+--             RAISE EXCEPTION 'GPA prerequisite not met for course.';
+--         END IF;
+--     END IF;
     
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER check_gpa_prerequisite_trigger
-BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
-FOR EACH ROW
-EXECUTE FUNCTION university.check_gpa_prerequisite();
+-- CREATE TRIGGER check_gpa_prerequisite_trigger
+-- BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
+-- FOR EACH ROW
+-- EXECUTE FUNCTION university.check_gpa_prerequisite();
 
 --------------------------------------------------------------------------------------------------------
 -- BR: Students registering for a course must complete the prerequisite courses for the course they want to register for.
