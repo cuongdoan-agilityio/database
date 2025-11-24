@@ -77,6 +77,7 @@
 ### BR17 — Student must satisfy all prerequisite courses
 * Type: Business Process Rule
 * Applied By: Trigger (`check_course_prerequisites`)
+* Details: Students must have completed all prerequisite courses with a grade of 1.0 or higher before enrolling in a course.
 
 ### BR18 — Student cannot enroll in same course twice in the same semester
 * Type: Validation Rule

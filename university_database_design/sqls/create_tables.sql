@@ -214,89 +214,65 @@ FOR EACH ROW
 EXECUTE FUNCTION university.check_major_eligibility();
 
 --------------------------------------------------------------------------------------------------------
--- BR: Students can only register for courses when they satisfy the minimum average score of the subject.
--- Rule: The GPA score of the courses studied must be greater than or equal to the GPA required of the course.
--- Triggered when adding a new student_enrollemnt record, calculates the GPA of the courses studied, compares it with the required GPQ of the course want to register.
--- CREATE OR REPLACE FUNCTION university.check_gpa_prerequisite()
--- RETURNS TRIGGER AS $$
--- DECLARE
---     required_gpa DECIMAL;
---     student_cumulative_gpa DECIMAL;
---     course_title VARCHAR;
--- BEGIN
---     -- Get class section's required GPA
---     SELECT cm.gpa_requirement, c.title
---     INTO required_gpa, course_title
---     FROM university.sections AS sect
---     JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
---     JOIN university.courses AS c ON cm.course_id = c.course_id
---     WHERE sect.section_id = NEW.section_id;
-
---     IF required_gpa IS NOT NULL THEN
---         -- Caculate cumulative GPA for the student 
---         SELECT AVG(score)
---         INTO student_cumulative_gpa
---         FROM university.student_sections
---         WHERE student_id = NEW.student_id
---           -- Only courses have score (completed courses)
---           AND score IS NOT NULL;
-
---         -- Coalesce student_cumulative_gpa to 0.0
---         student_cumulative_gpa := COALESCE(student_cumulative_gpa, 0.0);
-
---         -- Compare GPA
---         IF student_cumulative_gpa < required_gpa THEN
---             RAISE EXCEPTION 'GPA prerequisite not met for course.';
---         END IF;
---     END IF;
-    
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- CREATE TRIGGER check_gpa_prerequisite_trigger
--- BEFORE INSERT OR UPDATE OF student_id, section_id ON university.student_sections
--- FOR EACH ROW
--- EXECUTE FUNCTION university.check_gpa_prerequisite();
-
---------------------------------------------------------------------------------------------------------
 -- BR: Students registering for a course must complete the prerequisite courses for the course they want to register for.
--- Rule: Students must complete the prerequisite courses required for the course.
+-- Rule: Students must complete the prerequisite courses required for the course with a grade of 1.0 or higher.
 -- Triggered when adding a new or updating student_enrollemnt record, get a list of all the courses the student has taken and compare it with the requirements of the course he/she registered for.
 CREATE OR REPLACE FUNCTION university.check_course_prerequisites()
 RETURNS TRIGGER AS $$
 DECLARE
     target_course_id BIGINT;
     prereq_id BIGINT; 
-    prerequisite_course_code VARCHAR;
-    prerequisite_course_title VARCHAR;
     completed BOOLEAN;
+    completed_id BIGINT;
+    prereq_array BIGINT[];
 BEGIN
+    -- Get the course_id for the section being enrolled in
     SELECT cm.course_id
     INTO target_course_id
     FROM university.sections AS sect
     JOIN university.major_courses AS cm ON sect.major_course_id = cm.major_course_id
     WHERE sect.section_id = NEW.section_id;
 
-    FOR prereq_id IN 
-        SELECT prerequisite_course_id
-        FROM university.prerequisites
-        WHERE course_id = target_course_id
-    LOOP
-        completed := FALSE;
+    -- If course not found, skip prerequisite check (foreign key constraints will handle this)
+    IF target_course_id IS NULL THEN
+        RETURN NEW;
+    END IF;
 
+    -- Get the prerequisite array for the target course
+    SELECT prerequisite_course_id
+    INTO prereq_array
+    FROM university.courses
+    WHERE course_id = target_course_id;
+
+    -- If no prerequisites (NULL or empty array), allow enrollment
+    IF prereq_array IS NULL OR array_length(prereq_array, 1) IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Check each prerequisite
+    FOR prereq_id IN 
+        SELECT UNNEST(prereq_array)
+    LOOP
+        IF prereq_id IS NULL THEN
+            CONTINUE;
+        END IF;
+
+        completed := FALSE;
+        -- Check if student has completed this prerequisite with grade >= 1.0
         SELECT TRUE INTO completed
         FROM university.student_sections AS se
         JOIN university.sections AS sect_old ON se.section_id = sect_old.section_id
-        JOIN university.major_courses AS cm_old ON sect_old.major_course_id = cm_old.major_course_id
+        JOIN university.major_courses AS mc_old ON sect_old.major_course_id = mc_old.major_course_id
         
         WHERE se.student_id = NEW.student_id
-          AND cm_old.course_id = prereq_id
+          AND mc_old.course_id = prereq_id
           AND se.score IS NOT NULL 
+          AND se.score >= 1.0
         LIMIT 1;
 
-        IF NOT completed THEN
-            RAISE EXCEPTION 'Prerequisite course not completed.';
+        -- If prerequisite not completed, raise exception
+        IF completed IS NULL OR NOT completed THEN
+            RAISE EXCEPTION 'Prerequisite course not completed. Students must have a grade of 1.0 or higher in all prerequisite courses.';
         END IF;
     END LOOP;
 
