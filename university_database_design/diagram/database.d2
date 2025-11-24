@@ -48,28 +48,19 @@ major_courses: {
     major_course_id: bigint {constraint: primary_key}
     course_id: bigint {constraint: foreign_key}
     major_id: bigint {constraint: foreign_key}
-    # major_course_credit: int
-    major_course_required: boolean {constraint: default: false}
-    major_course_gpa_requirement: float
 }
 
 courses: {
     shape: sql_table
   
     course_id: bigint {constraint: primary_key}
+    prerequisite_course_id: array
     course_code: vachar(20) {constraint: unique}
     course_title: vachar(255)
     course_description: text
     course_type: vachar {constraint: enum(General, Fundamental, Specialized)}
+    course_required: boolean {constraint: default: false}
 }
-
-# prerequisites: {
-#     shape: sql_table
-
-#     prerequisite_id: bigint {constraint: primary_key}
-#     course_id: bigint {constraint: foreign_key}
-#     prerequisite_course_id: bigint {constraint: foreign_key}
-# }
 
 semesters: {
     shape: sql_table
@@ -139,16 +130,6 @@ semesters.semester_id --> sections.semester_id {
   label: "1:N"
   style.stroke-width: 2
 }
-
-# courses.course_id --> prerequisites.course_id {
-#   label: "1:N"
-#   style.stroke-width: 2
-# }
-
-# courses.course_id --> prerequisites.prerequisite_course_id {
-#   label: "1:N"
-#   style.stroke-width: 2
-# }
 
 major_courses.major_course_id --> sections.major_course_id {
   label: "1:N"
