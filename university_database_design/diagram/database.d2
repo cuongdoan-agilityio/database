@@ -156,6 +156,34 @@ sections.section_id --> timetables.section_id {
   style.stroke-width: 2
 }
 
+# scores: {
+#     shape: sql_table
+#     score_id: bigint {constraint: primary_key}
+#     student_id: bigint {constraint: foreign_key}
+#     course_id: bigint
+#     score: float
+# }
+
+# students.student_id --> scores.student_id {
+#   label: "1:N"
+#   style.stroke-width: 2
+# }
+
+# course_attributes: {
+#     shape: sql_table
+  
+#     course_attribute_id: bigint {constraint: primary_key}
+#     course_id: bigint {constraint: foreign_key}
+#     major_id: bigint
+#     required: boolean
+#     credit: int
+# }
+
+# courses.course_id --> course_attributes.course_id {
+#   label: "1: N"
+#   style.stroke-width: 2
+# }
+
 legend: {
   shape: text
   label: |md
@@ -166,7 +194,7 @@ legend: {
     - **Majors → Students** (1:N): One major has many student
     - **Sections → Timetables** (1:N): Each section has many lessons
     - **Semesters → Sections** (1:N): There are many classes each semester.
-    - **CourseMajors → Sections** (1:N): Each course_unit  will have many classes.
+    - **Major_courses → Sections** (1:N): Each major_course will have many classes.
     - **Professors → Sections** (1:N): Each professor is in charge of many class.
 
     ### M:N Relationships
