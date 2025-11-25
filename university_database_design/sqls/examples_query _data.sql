@@ -1,20 +1,20 @@
 -- Example Query: Retrieve all professors in the 'Mathematics Department'
 SELECT 
-    university.professors.professor_sin, 
-    university.professors.first_name, 
-    university.professors.last_name, 
-    university.professors.professor_email
-FROM university.professors
-JOIN university.departments ON university.professors.department_id = university.departments.department_id
+    p.professor_sin, 
+    p.first_name, 
+    p.last_name, 
+    p.professor_email
+FROM university.professors p
+JOIN university.departments d ON p.department_id = d.department_id
 WHERE 
-    university.departments.title = 'Mathematics Department';
+    d.title = 'Mathematics Department';
 
 -- Count the number of courses offered in each semester
 SELECT
     s.semester_id,
     s.name AS semester_name,
     COUNT(sect.section_id) AS total_class_sections,
-    COUNT(DISTINCT sect.major_course_id) AS total_unique_courses_offered,
+    COUNT(DISTINCT sect.major_course_id) AS total_unique_courses,
     COUNT(DISTINCT cm.course_id) AS total_course
 FROM university.semesters s
 LEFT JOIN university.sections sect ON s.semester_id = sect.semester_id
@@ -26,8 +26,7 @@ ORDER BY s.semester_id;
 SELECT
     s.student_id,
     s.student_code,
-    s.first_name,
-    s.last_name,
+    s.first_name || ' ' || s.last_name AS student_name,
     COUNT(sect.major_course_id) AS total_courses_enrolled
 FROM university.students s
 JOIN university.student_sections ss ON s.student_id = ss.student_id
@@ -146,72 +145,111 @@ LIMIT 10;
 SELECT * FROM university.professor_count_per_department
 ORDER BY total_professors DESC;
 
--- Get all available sections for a student to enroll in a given semester
+-- Query: Get all sections that a student can enroll in for a given semester
+-- This query checks:
+-- 1. Major eligibility (student's major must match section's major)
+-- 2. Prerequisites (student must have completed all prerequisites with score >= 1.0)
+-- 3. Capacity (section must have available spots)
+-- 4. Duplicate enrollment (student cannot enroll in same course in same semester)
+-- Usage: Replace :student_id and :semester_id with actual values
+
 SET search_path TO university, public;
 
 WITH student_info AS (
     SELECT 
         s.student_id,
         s.major_id,
-        COALESCE(AVG(ss.score), 0.0) AS cumulative_gpa
-    FROM students s
-    LEFT JOIN student_sections ss ON s.student_id = ss.student_id
-        AND ss.score IS NOT NULL
-    WHERE s.student_id = 42 -- :student_id
-    GROUP BY s.student_id, s.major_id
+        s.first_name,
+        s.last_name,
+        s.student_code
+    FROM university.students s
+    WHERE s.student_id = :student_id  -- Replace with actual student_id
 ),
 student_completed_courses AS (
+    -- Get all courses the student has completed with score >= 1.0 (passing grade)
     SELECT DISTINCT cm.course_id
-    FROM student_sections ss
-    JOIN sections sect ON ss.section_id = sect.section_id
-    JOIN major_courses cm ON sect.major_course_id = cm.major_course_id
-    WHERE ss.student_id = 42 -- :student_id
+    FROM university.student_sections ss
+    JOIN university.sections sect ON ss.section_id = sect.section_id
+    JOIN university.major_courses cm ON sect.major_course_id = cm.major_course_id
+    WHERE ss.student_id = :student_id  -- Replace with actual student_id
       AND ss.score IS NOT NULL
+      AND ss.score >= 1.0  -- Minimum passing grade
 ),
 student_current_enrollments AS (
+    -- Get courses the student is already enrolled in for this semester
     SELECT DISTINCT sect.major_course_id
-    FROM student_sections ss
-    JOIN sections sect ON ss.section_id = sect.section_id
-    WHERE ss.student_id = 42 -- :student_id
-      AND sect.semester_id = 2 -- :semester_id
+    FROM university.student_sections ss
+    JOIN university.sections sect ON ss.section_id = sect.section_id
+    WHERE ss.student_id = :student_id  -- Replace with actual student_id
+      AND sect.semester_id = :semester_id  -- Replace with actual semester_id
 ),
 section_enrollment_counts AS (
+    -- Count current enrollments for each section
     SELECT 
         section_id,
         COUNT(*) AS current_enrollment
-    FROM student_sections
+    FROM university.student_sections
     GROUP BY section_id
+),
+sections_with_prerequisites_met AS (
+    -- Check if student has met prerequisites for each section
+    SELECT 
+        sect.section_id,
+        c.course_id,
+        CASE 
+            WHEN c.prerequisite_course_id IS NULL OR array_length(c.prerequisite_course_id, 1) IS NULL THEN TRUE
+            ELSE (
+                -- Check if ALL prerequisites are in the student's completed courses list
+                SELECT bool_and(prereq_id IN (SELECT course_id FROM student_completed_courses))
+                FROM unnest(c.prerequisite_course_id) AS prereq_id
+            )
+        END AS prerequisites_met
+    FROM university.sections sect
+    JOIN university.major_courses cm ON sect.major_course_id = cm.major_course_id
+    JOIN university.courses c ON cm.course_id = c.course_id
 )
 
-SELECT DISTINCT
+SELECT 
+    si.student_code,
+    si.first_name || ' ' || si.last_name AS student_name,
     s.section_id,
     c.course_id,
+    c.course_code,
     c.title AS course_title,
+    c.course_type,
+    c.description AS course_description,
+    p.professor_sin,
     p.first_name || ' ' || p.last_name AS professor_name,
-    sem.name AS semester_name
-    -- cm.gpa_requirement
-FROM sections s
-JOIN major_courses cm ON s.major_course_id = cm.major_course_id
-JOIN courses c ON cm.course_id = c.course_id
-join professors p ON s.professor_sin = p.professor_sin
-JOIN semesters sem ON s.semester_id = sem.semester_id
+    p.professor_email,
+    sem.semester_id,
+    sem.name AS semester_name,
+    sem.start_date AS semester_start_date,
+    sem.end_date AS semester_end_date,
+    s.max_capacity,
+    COALESCE(sec.current_enrollment, 0) AS current_enrollment,
+    (s.max_capacity - COALESCE(sec.current_enrollment, 0)) AS available_spots,
+    CASE 
+        WHEN COALESCE(sec.current_enrollment, 0) >= s.max_capacity THEN 'Full'
+        ELSE 'Available'
+    END AS enrollment_status
+FROM university.sections s
+JOIN university.major_courses cm ON s.major_course_id = cm.major_course_id
+JOIN university.courses c ON cm.course_id = c.course_id
+JOIN university.professors p ON s.professor_sin = p.professor_sin
+JOIN university.semesters sem ON s.semester_id = sem.semester_id
 CROSS JOIN student_info si
 LEFT JOIN section_enrollment_counts sec ON s.section_id = sec.section_id
+LEFT JOIN student_current_enrollments sce ON s.major_course_id = sce.major_course_id
+LEFT JOIN sections_with_prerequisites_met swp ON s.section_id = swp.section_id
 
-LEFT JOIN student_current_enrollments sect_enrolled
-    ON s.major_course_id = sect_enrolled.major_course_id
-
-WHERE s.semester_id = 2 -- :semester_id
+WHERE s.semester_id = :semester_id  -- Replace with actual semester_id
+    -- Check major eligibility: student's major must match section's major
     AND si.major_id = cm.major_id
+    -- Check capacity: section must have available spots
     AND COALESCE(sec.current_enrollment, 0) < s.max_capacity
-    AND (cm.gpa_requirement IS NULL OR si.cumulative_gpa >= cm.gpa_requirement)
-    AND NOT EXISTS (
-        SELECT 1 
-        FROM prerequisites pr
-        WHERE pr.course_id = c.course_id
-          AND pr.prerequisite_course_id NOT IN (
-              SELECT course_id FROM student_completed_courses
-          )
-    )
-    AND sect_enrolled.major_course_id IS NULL
-ORDER BY c.course_id, s.section_id;
+    -- Check prerequisites: student must have completed all prerequisites with score >= 1.0
+    AND (swp.prerequisites_met = TRUE OR swp.prerequisites_met IS NULL)
+    -- Check duplicate enrollment: student cannot enroll in same course in same semester
+    AND sce.major_course_id IS NULL
+
+ORDER BY c.course_code, c.title, s.section_id;
