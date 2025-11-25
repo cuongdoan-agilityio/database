@@ -46,16 +46,9 @@ Designed for learning and practicing database design, business rules, and SQL qu
 ### ERD
 - [link](https://github.com/cuongdoan-agilityio/database/blob/feat/practice/university_database_design/diagram/udb.png)
 
-### Business Rules
-- Student score range between 0.00 and 4.00
-- Course gpa requirement score range between 0.00 and 4.00
-- The student's major code must match the major code of the registered course.
-- The GPA score of the courses studied must be greater than or equal to the GPA required of the course.
-- tudents must complete the prerequisite courses required for the course.
-- The course_type field in the courses table must be one of the specified values: General, Fundamental, Specialized
-- The status field in the timetable table must be one of the specified values: Scheduled, Cancelled, Complete
-- A student cannot enroll in multiple class sections of the same course unit within the same semester.
-- The number of students enrolled in a class section must not exceed its maximum capacity.
+### Docs
+- [Business rules](./docs/business_rules.md)
+- [Breaking rules](./docs/break_rules.md)
 
 ### Exmaple queries
 - Please check files of `sqls` folder
