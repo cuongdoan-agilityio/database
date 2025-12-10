@@ -16,13 +16,14 @@ class Student(Base):
     """
     __tablename__ = "students"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    student_id = Column(String(50), unique=True, index=True, nullable=False)
+    student_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    student_code = Column(String(50), unique=True, index=True, nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     phone = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationship
     registrations = relationship("Registration", back_populates="student", cascade="all, delete-orphan")
@@ -34,7 +35,7 @@ class Course(Base):
     """
     __tablename__ = "courses"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    course_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     course_code = Column(String(20), unique=True, index=True, nullable=False)
     course_name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
@@ -42,6 +43,7 @@ class Course(Base):
     max_capacity = Column(Integer, nullable=False, default=50)
     instructor = Column(String(200), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationship
     registrations = relationship("Registration", back_populates="course", cascade="all, delete-orphan")
@@ -59,16 +61,18 @@ class Registration(Base):
     __tablename__ = "registrations"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id"), nullable=False)
-    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False)
+    student_code = Column(String(50), ForeignKey("students.student_code"), nullable=False)
+    course_code = Column(String(20), ForeignKey("courses.course_code"), nullable=False)
     registration_date = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(String(20), default="active")  # active, dropped, completed
-    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
     # Relationships
     student = relationship("Student", back_populates="registrations")
     course = relationship("Course", back_populates="registrations")
     
     # Unique constraint: a student can only register for a course once
     __table_args__ = (
-        UniqueConstraint('student_id', 'course_id', name='unique_student_course'),
+        UniqueConstraint('student_code', 'course_code', name='unique_student_course'),
     )

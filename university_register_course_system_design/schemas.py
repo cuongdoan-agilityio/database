@@ -10,7 +10,7 @@ from typing import Optional
 
 # Student schemas
 class StudentBase(BaseModel):
-    student_id: str
+    student_code: str
     first_name: str
     last_name: str
     email: EmailStr
@@ -22,7 +22,7 @@ class StudentCreate(StudentBase):
 
 
 class StudentResponse(StudentBase):
-    id: uuid.UUID
+    student_id: uuid.UUID
     created_at: datetime
     
     class Config:
@@ -44,7 +44,7 @@ class CourseCreate(CourseBase):
 
 
 class CourseResponse(CourseBase):
-    id: uuid.UUID
+    course_id: uuid.UUID
     created_at: datetime
     
     class Config:
@@ -53,8 +53,8 @@ class CourseResponse(CourseBase):
 
 # Registration schemas
 class RegistrationBase(BaseModel):
-    student_id: uuid.UUID
-    course_id: uuid.UUID
+    student_code: str
+    course_code: str
     status: str = "active"
 
 

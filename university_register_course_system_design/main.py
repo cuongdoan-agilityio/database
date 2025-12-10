@@ -37,13 +37,13 @@ def create_max_capacity_trigger():
                     -- Get current registration count for the course (only active registrations)
                     SELECT COUNT(*) INTO current_count
                     FROM registrations
-                    WHERE course_id = NEW.course_id
+                    WHERE course_code = NEW.course_code
                     AND status = 'active';
                     
                     -- Get max_capacity for the course
                     SELECT max_capacity INTO max_cap
                     FROM courses
-                    WHERE id = NEW.course_id;
+                    WHERE course_code = NEW.course_code;
                     
                     -- Check if adding this registration would exceed capacity
                     IF current_count >= max_cap THEN
@@ -122,7 +122,7 @@ def get_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 @app.get("/students/{student_id}", response_model=StudentResponse)
 def get_student(student_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get a specific student by ID"""
-    student = db.query(Student).filter(Student.id == student_id).first()
+    student = db.query(Student).filter(Student.student_id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
@@ -149,7 +149,7 @@ def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 @app.get("/courses/{course_id}", response_model=CourseResponse)
 def get_course(course_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get a specific course by ID"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    course = db.query(Course).filter(Course.course_id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return course
@@ -158,15 +158,15 @@ def get_course(course_id: uuid.UUID, db: Session = Depends(get_db)):
 @app.get("/courses/{course_id}/students", response_model=List[StudentResponse])
 def get_course_students(course_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get all students registered for a specific course"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    course = db.query(Course).filter(Course.course_id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
     registrations = db.query(Registration).filter(
-        Registration.course_id == course_id,
+        Registration.course_code == course.course_code,
         Registration.status == 'active'
     ).all()
-    students = [db.query(Student).filter(Student.id == reg.student_id).first() for reg in registrations]
+    students = [db.query(Student).filter(Student.student_code == reg.student_code).first() for reg in registrations]
     return students
 
 
@@ -175,19 +175,19 @@ def get_course_students(course_id: uuid.UUID, db: Session = Depends(get_db)):
 def register_course(registration: RegistrationCreate, db: Session = Depends(get_db)):
     """Register a student for a course"""
     # Check if student exists
-    student = db.query(Student).filter(Student.id == registration.student_id).first()
+    student = db.query(Student).filter(Student.student_code == registration.student_code).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
     # Check if course exists
-    course = db.query(Course).filter(Course.id == registration.course_id).first()
+    course = db.query(Course).filter(Course.course_code == registration.course_code).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
     # Check if already registered
     existing_registration = db.query(Registration).filter(
-        Registration.student_id == registration.student_id,
-        Registration.course_id == registration.course_id
+        Registration.student_code == registration.student_code,
+        Registration.course_code == registration.course_code
     ).first()
     
     if existing_registration:
@@ -196,7 +196,7 @@ def register_course(registration: RegistrationCreate, db: Session = Depends(get_
     # Check if course has available spots (application-level check)
     # Note: Database trigger also enforces this at the database level
     current_registrations = db.query(Registration).filter(
-        Registration.course_id == registration.course_id,
+        Registration.course_code == registration.course_code,
         Registration.status == 'active'
     ).count()
     
@@ -225,23 +225,23 @@ def get_registrations(skip: int = 0, limit: int = 100, db: Session = Depends(get
     registrations = db.query(Registration).offset(skip).limit(limit).all()
     # Load relationships
     for reg in registrations:
-        reg.student = db.query(Student).filter(Student.id == reg.student_id).first()
-        reg.course = db.query(Course).filter(Course.id == reg.course_id).first()
+        reg.student = db.query(Student).filter(Student.student_code == reg.student_code).first()
+        reg.course = db.query(Course).filter(Course.course_code == reg.course_code).first()
     return registrations
 
 
 @app.get("/students/{student_id}/registrations", response_model=List[RegistrationResponse])
 def get_student_registrations(student_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get all courses a student is registered for"""
-    student = db.query(Student).filter(Student.id == student_id).first()
+    student = db.query(Student).filter(Student.student_id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    registrations = db.query(Registration).filter(Registration.student_id == student_id).all()
+    registrations = db.query(Registration).filter(Registration.student_code == student.student_code).all()
     # Load relationships
     for reg in registrations:
         reg.student = student
-        reg.course = db.query(Course).filter(Course.id == reg.course_id).first()
+        reg.course = db.query(Course).filter(Course.course_code == reg.course_code).first()
     return registrations
 
 
