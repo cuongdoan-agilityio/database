@@ -263,6 +263,50 @@ All tables use UUID (Universally Unique Identifier) as primary keys instead of a
 - **Application-Level Check**: The API also checks capacity before allowing registration
 - **Active Registrations Only**: Only active registrations count toward the capacity limit
 
+## Sample Data
+
+A script is provided to insert sample data into the database for testing purposes.
+
+### Insert Sample Data
+
+The `insert_sample_data.py` script will create:
+- **200 students** with realistic fake data (names, emails, phone numbers)
+- **2 courses** (CS101 and MATH201)
+
+#### Using Docker Compose
+
+```bash
+# Make sure the containers are running
+docker-compose up -d
+
+# Run the script inside the API container
+docker-compose exec api python insert_sample_data.py
+```
+
+#### Local Development
+
+```bash
+# Make sure you have the dependencies installed
+pip install -r requirements.txt
+
+# Set environment variables if needed
+export DATABASE_USER=postgres
+export DATABASE_PASSWORD=postgres
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+export DATABASE_NAME=university_registration
+
+# Run the script
+python insert_sample_data.py
+```
+
+The script will:
+- Create tables if they don't exist
+- Insert 200 students with unique student IDs (STU000001 to STU000200)
+- Insert 2 courses (CS101 and MATH201)
+- Handle duplicate entries gracefully
+- Display a summary of created records
+
 ## Validation Features
 
 The API includes several validation checks:
@@ -277,15 +321,16 @@ The API includes several validation checks:
 
 ```
 university_register_course_system_design/
-├── main.py              # FastAPI application and endpoints
-├── models.py            # SQLAlchemy database models
-├── schemas.py           # Pydantic schemas for validation
-├── database.py          # Database configuration
-├── requirements.txt     # Python dependencies
-├── Dockerfile           # Docker image configuration
-├── docker-compose.yaml  # Docker Compose configuration
-├── .dockerignore        # Files to exclude from Docker build
-└── README.md           # This file
+├── main.py                 # FastAPI application and endpoints
+├── models.py               # SQLAlchemy database models
+├── schemas.py              # Pydantic schemas for validation
+├── database.py             # Database configuration
+├── insert_sample_data.py   # Script to insert sample data
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Docker image configuration
+├── docker-compose.yaml     # Docker Compose configuration
+├── .dockerignore           # Files to exclude from Docker build
+└── README.md              # This file
 ```
 
 ## Development
