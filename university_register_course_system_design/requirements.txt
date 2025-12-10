@@ -4,4 +4,5 @@ sqlalchemy==2.0.23
 pydantic[email]==2.5.0
 python-multipart==0.0.6
 psycopg2-binary==2.9.9
+faker==23.0.0
 
