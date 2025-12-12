@@ -130,7 +130,7 @@ curl -X DELETE "http://localhost:8000/registrations/6ba7b811-9dad-11d1-80b4-00c0
 
 Scripts are provided to insert sample data into the database for testing purposes. You can use either:
 ```
-k6 run k6_insert_data.js
+k6 run insert_data.js
 ```
 
 ## Load Testing
@@ -142,5 +142,5 @@ A K6 load testing script is provided to test concurrent registration scenarios. 
 # See k6_README.md for installation instructions
 
 # Run the load test (200 students trying to register for CS101 with capacity 50)
-k6 run k6_load_test.js
+k6 run test_without_transaction.js
 ```

@@ -6,8 +6,8 @@ This directory contains K6 scripts for:
 
 ## Scripts Overview
 
-- **`k6_insert_data.js`**: Inserts 200 students and 2 courses via API endpoints
-- **`k6_load_test.js`**: Load tests concurrent registration with capacity constraints
+- **`insert_data.js`**: Inserts 200 students and 2 courses via API endpoints
+- **`test_without_transaction.js`**: Load tests concurrent registration with capacity constraints
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ This directory contains K6 scripts for:
 ### Insert 200 Students and 2 Courses
 
 ```
-k6 run k6_insert_data.js
+k6 run insert_data.js
 ```
 
 ## Running the Load Test
@@ -34,5 +34,5 @@ k6 run k6_insert_data.js
 ### Basic Test (200 students, course CS101)
 
 ```
-k6 run k6_load_test.js
+k6 run test_without_transaction.js
 ```
