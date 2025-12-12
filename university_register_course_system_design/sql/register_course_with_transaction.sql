@@ -32,10 +32,6 @@ BEGIN
     FROM students
     WHERE student_code = p_student_code;
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Student not found' USING ERRCODE = 'P0001';
-    END IF;
-
     -- 2. Lock course row FOR UPDATE to prevent concurrent modifications
     SELECT 
         course_id, course_code, course_name, description,
@@ -44,10 +40,6 @@ BEGIN
     FROM courses
     WHERE course_code = p_course_code
     FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Course not found' USING ERRCODE = 'P0001';
-    END IF;
 
     v_max_capacity := v_course.max_capacity;
 

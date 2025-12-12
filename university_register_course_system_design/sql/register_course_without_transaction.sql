@@ -33,10 +33,6 @@ BEGIN
     FROM students
     WHERE student_code = p_student_code;
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Student not found' USING ERRCODE = 'P0001';
-    END IF;
-
     -- 2. Get course info (NO LOCK - allows concurrent reads)
     SELECT 
         course_id, course_code, course_name, description,
@@ -44,10 +40,6 @@ BEGIN
     INTO v_course
     FROM courses
     WHERE course_code = p_course_code;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Course not found' USING ERRCODE = 'P0001';
-    END IF;
 
     v_max_capacity := v_course.max_capacity;
 
