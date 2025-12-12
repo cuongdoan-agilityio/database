@@ -16,7 +16,7 @@ export const options = {
     { duration: '1s', target: 400 },
   ],
   thresholds: {
-    http_req_failed: ['rate<0.4'],
+    http_req_failed: ['rate<0.3'],
   },
 };
 
@@ -38,11 +38,6 @@ function generateStudentCodes(count) {
 const studentCodes = STUDENT_CODES || generateStudentCodes(200);
 
 export function setup() {
-  // Setup: Verify the course exists and get initial registration count
-  console.log(`Testing registration for course: ${COURSE_CODE}`);
-  console.log(`Base URL: ${BASE_URL}`);
-  console.log(`Number of students attempting registration: ${studentCodes.length}`);
-  
   // Check if course exists
   const courseResponse = http.get(`${BASE_URL}/courses/`);
   if (courseResponse.status !== 200) {
@@ -51,23 +46,13 @@ export function setup() {
   
   const courses = JSON.parse(courseResponse.body);
   const course = courses.find(c => c.course_code === COURSE_CODE);
-  
-  if (!course) {
-    throw new Error(`Course ${COURSE_CODE} not found. Please create it first.`);
-  }
-  
-  console.log(`Course found: ${course.course_name}`);
-  console.log(`Max capacity: ${course.max_capacity}`);
-  
-  // Get initial registration count
   const registrationsResponse = http.get(`${BASE_URL}/registrations/`);
   let initialCount = 0;
+
   if (registrationsResponse.status === 200) {
     const registrations = JSON.parse(registrationsResponse.body);
     initialCount = registrations.filter(r => r.course_code === COURSE_CODE && r.status === 'active').length;
   }
-  
-  console.log(`Initial registrations for ${COURSE_CODE}: ${initialCount}`);
   
   return {
     courseCode: COURSE_CODE,
@@ -103,7 +88,7 @@ export default function (data) {
   
   // Attempt registration
   const response = http.post(
-    `${BASE_URL}/registrations_without_transaction/`,
+    `${BASE_URL}/registrations/`,
     payload,
     params
   );
@@ -123,7 +108,7 @@ export default function (data) {
     registrationSuccessRate.add(1);
     registrationCounter.add(1);
     console.log(`Student ${studentCode} successfully registered`);
-  } else if (response.status === 400) {
+  } else {
     // Failed registration
     registrationFailureRate.add(1);
 

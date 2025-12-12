@@ -10,7 +10,7 @@ const studentsCreated = new Counter('students_created');
 const coursesCreated = new Counter('courses_created');
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const NUM_STUDENTS = parseInt(__ENV.NUM_STUDENTS || '200');
+const NUM_STUDENTS = parseInt(__ENV.NUM_STUDENTS || '400');
 const NUM_COURSES = parseInt(__ENV.NUM_COURSES || '2');
 
 // Test configuration
@@ -60,7 +60,7 @@ const coursesData = [
         course_name: 'Introduction to Computer Science',
         description: 'An introductory course covering fundamental concepts of computer science including programming basics, algorithms, and data structures.',
         credits: 3,
-        max_capacity: 50,
+        max_capacity: 30,
         instructor: 'Dr. Sarah Johnson'
     },
     {
@@ -68,7 +68,7 @@ const coursesData = [
         course_name: 'Calculus I',
         description: 'First course in calculus covering limits, derivatives, and applications of differentiation.',
         credits: 4,
-        max_capacity: 50,
+        max_capacity: 30,
         instructor: 'Prof. Michael Chen'
     }
 ];
