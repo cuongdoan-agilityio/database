@@ -52,7 +52,6 @@ BEGIN
     v_max_capacity := v_course.max_capacity;
 
     -- 3. Lock all active registrations for this course FOR UPDATE
-    -- This serializes registration attempts and ensures accurate capacity counting
     PERFORM 1
     FROM registrations
     WHERE course_code = p_course_code
@@ -118,4 +117,3 @@ BEGIN
     RETURN NEXT;
 END;
 $$;
-

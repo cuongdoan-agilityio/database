@@ -51,8 +51,7 @@ BEGIN
 
     v_max_capacity := v_course.max_capacity;
 
-    -- 3. Check if student is already registered (no transaction isolation)
-    -- RACE CONDITION: Multiple concurrent requests may not see each other's inserts
+    -- 3. Check if student is already registered
     SELECT id
     INTO v_existing
     FROM registrations
@@ -63,22 +62,18 @@ BEGIN
         RAISE EXCEPTION 'Student is already registered for this course' USING ERRCODE = 'P0001';
     END IF;
 
-    -- 4. Count current registrations (RACE CONDITION: multiple requests can read same count)
-    -- No locking means concurrent requests may all see the same count and all proceed
+    -- 4. Count current registrations
     SELECT COUNT(*) INTO v_current_count
     FROM registrations
     WHERE course_code = p_course_code
       AND status = 'active';
 
-    -- 5. Check capacity (but this check is not atomic with the insert)
-    -- Multiple concurrent requests can all pass this check and all insert
+    -- 5. Check capacity
     IF v_current_count >= v_max_capacity THEN
         RAISE EXCEPTION 'Course has reached maximum capacity of % students', v_max_capacity USING ERRCODE = 'P0001';
     END IF;
 
-    -- 6. Insert registration (no transaction - auto-commits immediately)
-    -- Multiple concurrent requests can all pass the capacity check above
-    -- and all insert, causing capacity to be exceeded
+    -- 6. Insert registration
     INSERT INTO registrations (
         id, student_code, course_code, status,
         registration_date, created_at, updated_at
