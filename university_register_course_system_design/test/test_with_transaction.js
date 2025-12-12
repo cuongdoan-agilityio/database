@@ -14,9 +14,11 @@ const registrationDuration = new Trend('registration_duration');
 export const options = {
   stages: [
     { duration: '1s', target: 400 },
+    { duration: '10s', target: 400 },
+    { duration: '2s', target: 0 },
   ],
   thresholds: {
-    http_req_failed: ['rate<0.3'],
+    http_req_failed: ['rate<0.01'],
   },
 };
 
