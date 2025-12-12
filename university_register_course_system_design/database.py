@@ -2,6 +2,7 @@
 Database configuration and session management
 """
 
+from sqlalchemy.orm.session import Session
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -21,9 +22,10 @@ SQLALCHEMY_DATABASE_URL = (
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using them
-    pool_size=10,
-    max_overflow=10
-    # Note: isolation_level should be set per connection, not globally
+    pool_size=1,
+    max_overflow=0,
+    isolation_level = "AUTOCOMMIT"
+    # isolation_level="SERIALIZABLE"
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker[Session](autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

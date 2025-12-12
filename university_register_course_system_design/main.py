@@ -3,6 +3,7 @@ University Course Registration System API
 Main application entry point
 """
 
+import time
 import uuid
 import os
 from pathlib import Path
@@ -159,6 +160,7 @@ def register_course(registration: RegistrationCreate, db: Session = Depends(get_
     """
 
     try:
+        time.sleep(0.5)
         with engine.connect() as conn:
             trans = conn.begin()
             
@@ -275,6 +277,7 @@ def register_course_without_transaction(registration: RegistrationCreate, db: Se
     Uses PostgreSQL function without locking to demonstrate race conditions.
     """
     try:
+        time.sleep(0.5)
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             # Call the SQL function that does NOT use transactions or locking
             result = conn.execute(
