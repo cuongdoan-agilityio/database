@@ -75,7 +75,7 @@ def create_max_capacity_trigger():
         print(f"Warning: Could not create trigger (may already exist or database not ready): {e}")
 
 # Create the trigger on startup
-create_max_capacity_trigger()
+# create_max_capacity_trigger()
 
 app = FastAPI(
     title="University Course Registration System",
@@ -180,59 +180,60 @@ def register_course(registration: RegistrationCreate, db: Session = Depends(get_
     when multiple students register simultaneously.
     """
     try:
-        # Start transaction - check if student exists
-        student = db.query(Student).filter(Student.student_code == registration.student_code).first()
-        if not student:
-            raise HTTPException(status_code=404, detail="Student not found")
-        
-        # Lock the course row for update to prevent concurrent registrations
-        # This ensures only one transaction can check and update capacity at a time
-        course = db.query(Course).filter(
-            Course.course_code == registration.course_code
-        ).with_for_update().first()
-        
-        if not course:
-            raise HTTPException(status_code=404, detail="Course not found")
-        
-        # Check if already registered (within the locked transaction)
-        existing_registration = db.query(Registration).filter(
-            Registration.student_code == registration.student_code,
-            Registration.course_code == registration.course_code
-        ).first()
-        
-        if existing_registration:
-            db.rollback()
-            raise HTTPException(status_code=400, detail="Student is already registered for this course")
-        
-        # Check current registrations count (within the locked transaction)
-        # This count is now accurate because the course row is locked
-        current_registrations = db.query(Registration).filter(
-            Registration.course_code == registration.course_code,
-            Registration.status == 'active'
-        ).count()
-        
-        # Check capacity before creating registration
-        if current_registrations >= course.max_capacity:
-            db.rollback()
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Course has reached maximum capacity of {course.max_capacity} students"
-            )
-        
-        # Create registration within the transaction
-        db_registration = Registration(**registration.dict())
-        db.add(db_registration)
-        
-        # Commit the transaction
-        # If the database trigger detects capacity exceeded, it will raise an exception
-        db.commit()
-        db.refresh(db_registration)
-        
-        # Load relationships for response
-        db_registration.student = student
-        db_registration.course = course
-        
-        return db_registration
+        with db.begin(): 
+            # Start transaction - check if student exists
+            student = db.query(Student).filter(Student.student_code == registration.student_code).first()
+            if not student:
+                raise HTTPException(status_code=404, detail="Student not found")
+            
+            # Lock the course row for update to prevent concurrent registrations
+            # This ensures only one transaction can check and update capacity at a time
+            course = db.query(Course).filter(
+                Course.course_code == registration.course_code
+            ).with_for_update().first()
+            
+            if not course:
+                raise HTTPException(status_code=404, detail="Course not found")
+            
+            # Check if already registered (within the locked transaction)
+            existing_registration = db.query(Registration).filter(
+                Registration.student_code == registration.student_code,
+                Registration.course_code == registration.course_code
+            ).first()
+            
+            if existing_registration:
+                db.rollback()
+                raise HTTPException(status_code=400, detail="Student is already registered for this course")
+            
+            # Check current registrations count (within the locked transaction)
+            # This count is now accurate because the course row is locked
+            current_registrations = db.query(Registration).filter(
+                Registration.course_code == registration.course_code,
+                Registration.status == 'active'
+            ).count()
+            
+            # Check capacity before creating registration
+            if current_registrations >= course.max_capacity:
+                db.rollback()
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Course has reached maximum capacity of {course.max_capacity} students"
+                )
+            
+            # Create registration within the transaction
+            db_registration = Registration(**registration.dict())
+            db.add(db_registration)
+            
+            # Commit the transaction
+            # If the database trigger detects capacity exceeded, it will raise an exception
+            db.commit()
+            db.refresh(db_registration)
+            
+            # Load relationships for response
+            db_registration.student = student
+            db_registration.course = course
+            
+            return db_registration
         
     except IntegrityError as e:
         # Handle database constraint violations (e.g., from trigger)
@@ -270,6 +271,57 @@ def register_course(registration: RegistrationCreate, db: Session = Depends(get_
             status_code=500,
             detail=f"An unexpected error occurred: {str(e)}"
         )
+
+@app.post("/registrations_without_transaction/", response_model=RegistrationResponse, status_code=201)
+def register_course_without_transaction(registration: RegistrationCreate, db: Session = Depends(get_db)):
+    """
+    egister a student for a course with transaction handling.
+    Uses row-level locking (SELECT FOR UPDATE) to prevent race conditions
+    when multiple students register simultaneously.
+    """
+    # Check if student exists
+    student = db.query(Student).filter(Student.student_code == registration.student_code).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check if course exists
+    course = db.query(Course).filter(Course.course_code == registration.course_code).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check if already registered
+    existing_registration = db.query(Registration).filter(
+        Registration.student_code == registration.student_code,
+        Registration.course_code == registration.course_code
+    ).first()
+    
+    if existing_registration:
+        raise HTTPException(status_code=400, detail="Student is already registered for this course")
+    
+    # Check if course has available spots (application-level check)
+    # Note: Database trigger also enforces this at the database level
+    current_registrations = db.query(Registration).filter(
+        Registration.course_code == registration.course_code,
+        Registration.status == 'active'
+    ).count()
+    
+    if current_registrations >= course.max_capacity:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Course has reached maximum capacity of {course.max_capacity} students"
+        )
+    
+    # Create registration
+    db_registration = Registration(**registration.dict())
+    db.add(db_registration)
+    db.commit()
+    db.refresh(db_registration)
+    
+    # Load relationships for response
+    db_registration.student = student
+    db_registration.course = course
+    
+    return db_registration
 
 
 @app.get("/registrations/", response_model=List[RegistrationResponse])
