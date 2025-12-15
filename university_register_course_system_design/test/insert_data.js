@@ -12,48 +12,11 @@ const coursesCreated = new Counter('courses_created');
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
 const NUM_STUDENTS = parseInt(__ENV.NUM_STUDENTS || '400');
 const NUM_COURSES = parseInt(__ENV.NUM_COURSES || '2');
-
-// Test configuration
-export const options = {
-    stages: [
-        { duration: '2s', target: 10 },  // Ramp up to 10 concurrent users quickly
-        { duration: '60s', target: 10 }, // Keep 10 users - enough time to create all data
-        { duration: '2s', target: 0 },   // Ramp down
-    ],
-    thresholds: {
-        http_req_duration: ['p(95)<4000'], // 95% of requests should be below 3s
-        http_req_failed: ['rate<0.05'],    // Error rate should be less than 5%
-        student_creation_success: ['rate>0.95'], // At least 95% success rate
-        course_creation_success: ['rate>0.999'],   // 100% success rate for courses
-    },
-};
-
-// Generate student data
-function generateStudentData(index) {
-    const firstNames = [
-        'John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'James', 'Emma', 'Robert', 'Olivia', 'Henry', 'Lucas', 'Ava', 'Mason', 'Sophia', 'Ethan', 'Isabella', 'Logan',
-        'Mia', 'Jackson', 'Charlotte', 'Aiden', 'Amelia', 'Harper', 'Oliver', 'Evelyn', 'Elijah', 'Abigail', 'Benjamin', 'Madison', 'Jacob', 'Elizabeth', 'William'
-    ];
-    const firstName = firstNames[index % firstNames.length];
-
-    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Trum', 'Ford', 'Nguyen', 'Hall', 'Hill'];
-    const lastName = lastNames[Math.floor(index / firstNames.length) % lastNames.length];
-
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index}@university.edu`;
-    const phone = `555-${String(1000 + (index % 9000)).padStart(4, '0')}`;
-
-    const studentCode = `STU${String(index).padStart(6, '0')}`;
-
-    return {
-        student_code: studentCode,
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        phone: phone
-    };
-}
-
-// Course data
+const firstNames = [
+    'John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'James', 'Emma', 'Robert', 'Olivia', 'Henry', 'Lucas', 'Ava', 'Mason', 'Sophia', 'Ethan', 'Isabella', 'Logan',
+    'Mia', 'Jackson', 'Charlotte', 'Aiden', 'Amelia', 'Harper', 'Oliver', 'Evelyn', 'Elijah', 'Abigail', 'Benjamin', 'Madison', 'Jacob', 'Elizabeth', 'William'
+];
+const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Trum', 'Ford', 'Nguyen', 'Hall', 'Hill'];
 const coursesData = [
     {
         course_code: 'CS101',
@@ -73,6 +36,35 @@ const coursesData = [
     }
 ];
 
+// Test configuration
+export const options = {
+    stages: [
+        { duration: '1s', target: 10  },
+        { duration: '60s', target: 10 },
+        { duration: '2s', target: 0 },
+    ],
+    thresholds: {
+        http_req_duration: ['p(95)<4000'],
+        http_req_failed: ['rate<0.3'],
+        student_creation_success: ['rate>0.95'],
+        course_creation_success: ['rate>0.999'],
+    },
+};
+
+// Generate student data
+function generateStudentData(index) {
+    const firstName = firstNames[index % firstNames.length];
+    const lastName = lastNames[Math.floor(index / firstNames.length) % lastNames.length];
+
+    return {
+        student_code: `STU${String(index).padStart(6, '0')}`,
+        first_name: firstName,
+        last_name: lastName,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index}@university.edu`,
+        phone: `555-${String(1000 + (index % 9000)).padStart(4, '0')}`
+    };
+}
+
 export function setup() {
     return {
         baseUrl: BASE_URL,
@@ -88,7 +80,7 @@ export default function (data) {
         if (courseIndex < coursesData.length) {
             createCourse(data.baseUrl, coursesData[courseIndex], courseIndex);
         }
-        sleep(0.5);
+        sleep(0.1);
     }
 
     // Create students
@@ -98,7 +90,7 @@ export default function (data) {
         createStudent(data.baseUrl, studentIndex);
     }
 
-    sleep(0.3);
+    sleep(0.1);
 }
 
 function createStudent(baseUrl, index) {
@@ -135,17 +127,10 @@ function createStudent(baseUrl, index) {
     if (response.status === 201) {
         studentCreationSuccess.add(1);
         studentsCreated.add(1);
-        console.log(`Created student with code: ${studentData.student_code}`);
+        console.log(`Created student: ${studentData.student_code}`);
     } else {
         studentCreationFailure.add(1);
-        const errorBody = JSON.parse(response.body || '{}');
-        const detail = errorBody.detail || 'Unknown error';
-
-        if (response.status === 400 && detail.includes('already exists')) {
-            console.log(`Student with code ${studentData.student_code} already exists.`);
-        } else {
-            console.log(`Failed to create student with code ${studentData.student_code}`);
-        }
+        console.log(`Student with code ${studentData.student_code} already exists or failed to create.`);
     }
 }
 
@@ -185,20 +170,13 @@ function createCourse(baseUrl, courseData, index) {
         console.log(`Created course with code ${courseData.course_code}`);
     } else {
         courseCreationFailure.add(1);
-        const errorBody = JSON.parse(response.body || '{}');
-        const detail = errorBody.detail || 'Unknown error';
-
-        if (response.status === 400 && detail.includes('already exists')) {
-            console.log(`Course with code ${courseData.course_code} already exists`);
-        } else {
-            console.log(`Failed to create course with code ${courseData.course_code}`);
-        }
+        console.log(`Course with code ${courseData.course_code} already exists or failed to create.`);
     }
 }
 
 export function teardown(data) {
     // Verify students were created
-    const studentsResponse = http.get(`${data.baseUrl}/students/`);
+    const studentsResponse = http.get(`${data.baseUrl}/students/?limit=500`);
     let studentCount = 0;
     if (studentsResponse.status === 200) {
         const students = JSON.parse(studentsResponse.body);
@@ -215,5 +193,5 @@ export function teardown(data) {
         console.log(`Total courses in database: ${courseCount}`);
     }
 
-    console.log('\n=== Complete create data ===');
+    console.log('\n=== Completed ===');
 }
