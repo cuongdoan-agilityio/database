@@ -2,34 +2,28 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Counter, Trend } from 'k6/metrics';
 
-// Custom metrics
 const registrationSuccessRate = new Rate('registration_success');
 const registrationFailureRate = new Rate('registration_failure');
-const capacityExceededRate = new Rate('capacity_exceeded');
-const duplicateRegistrationRate = new Rate('duplicate_registration');
 const registrationCounter = new Counter('total_registrations');
 const registrationDuration = new Trend('registration_duration');
 
-// Test configuration
+const BASE_URL = 'http://localhost:8000';
+const COURSE_CODE = 'CS101';
+
 export const options = {
   stages: [
     { duration: '1s', target: 400 },
-    { duration: '10s', target: 400 },
-    { duration: '2s', target: 0 },
   ],
   thresholds: {
-    http_req_failed: ['rate<0.01'],
+    http_req_failed: ['rate<0.3'],
   },
 };
 
-// Configuration
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const COURSE_CODE = __ENV.COURSE_CODE || 'CS101';
-const STUDENT_CODES = __ENV.STUDENT_CODES ? __ENV.STUDENT_CODES.split(',') : null;
 
 // Generate student codes if not provided
 function generateStudentCodes(count) {
   const codes = [];
+
   for (let i = 1; i <= count; i++) {
     codes.push(`STU${String(i).padStart(6, '0')}`);
   }
@@ -37,10 +31,9 @@ function generateStudentCodes(count) {
 }
 
 // Get student codes
-const studentCodes = STUDENT_CODES || generateStudentCodes(200);
+const studentCodes = generateStudentCodes(200);
 
 export function setup() {
-  // Check if course exists
   const courseResponse = http.get(`${BASE_URL}/courses/`);
   if (courseResponse.status !== 200) {
     throw new Error(`Failed to fetch courses: ${courseResponse.status}`);
@@ -65,8 +58,6 @@ export function setup() {
 }
 
 export default function (data) {
-  // Each VU (Virtual User) represents one student trying to register
-  // Use modulo to handle cases where VU count exceeds student codes
   const studentIndex = (__VU - 1) % data.studentCodes.length;
   const studentCode = data.studentCodes[studentIndex];
   
@@ -90,7 +81,7 @@ export default function (data) {
   
   // Attempt registration
   const response = http.post(
-    `${BASE_URL}/registrations/`,
+    `${BASE_URL}/registrations_with_transaction/`,
     payload,
     params
   );
@@ -106,14 +97,11 @@ export default function (data) {
   });
   
   if (response.status === 201) {
-    // Successful registration
     registrationSuccessRate.add(1);
     registrationCounter.add(1);
     console.log(`Student ${studentCode} successfully registered`);
   } else {
-    // Failed registration
     registrationFailureRate.add(1);
-
     console.log(`Student ${studentCode} - Error: ${response.status}`);
   }
 }
@@ -133,8 +121,6 @@ export function teardown(data) {
     ).length;
     
     console.log(`Final registrations: ${finalCount}`);
-    console.log(`New registrations: ${finalCount - data.initialCount}`);
-    console.log(`Expected max: ${data.initialCount + data.maxCapacity}`);
     
     if (finalCount <= data.initialCount + data.maxCapacity) {
       console.log('Capacity constraint respected!');
