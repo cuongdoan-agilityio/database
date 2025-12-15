@@ -3,11 +3,13 @@ Database models
 """
 
 import uuid
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
-from database import Base
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, UniqueConstraint, CheckConstraint
+
+
+Base = declarative_base()
 
 
 class Student(Base):

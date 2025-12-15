@@ -3,9 +3,9 @@ Pydantic schemas for request/response validation
 """
 
 import uuid
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
+from pydantic import BaseModel, EmailStr
 
 
 # Student schemas

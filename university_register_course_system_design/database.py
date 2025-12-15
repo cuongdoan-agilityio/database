@@ -2,11 +2,10 @@
 Database configuration and session management
 """
 
-from sqlalchemy.orm.session import Session
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 
 DATABASE_USER = os.getenv("DATABASE_USER", "postgres")
 DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD", "postgres")
@@ -21,11 +20,8 @@ SQLALCHEMY_DATABASE_URL = (
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_size=1,
+    pool_pre_ping=True,
+    pool_size=10,
     max_overflow=0,
-    isolation_level = "AUTOCOMMIT"
-    # isolation_level="SERIALIZABLE"
 )
-SessionLocal = sessionmaker[Session](autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
