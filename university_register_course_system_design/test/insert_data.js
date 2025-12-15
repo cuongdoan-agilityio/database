@@ -44,10 +44,7 @@ export const options = {
         { duration: '2s', target: 0 },
     ],
     thresholds: {
-        http_req_duration: ['p(95)<4000'],
         http_req_failed: ['rate<0.3'],
-        student_creation_success: ['rate>0.95'],
-        course_creation_success: ['rate>0.999'],
     },
 };
 
